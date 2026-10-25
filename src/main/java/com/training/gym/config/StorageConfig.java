@@ -1,8 +1,8 @@
 package com.training.gym.config;
 
-import com.training.gym.trainee.Trainee;
-import com.training.gym.trainer.Trainer;
-import com.training.gym.training.Training;
+import com.training.gym.trainee.domain.Trainee;
+import com.training.gym.trainer.domain.Trainer;
+import com.training.gym.training.domain.Training;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

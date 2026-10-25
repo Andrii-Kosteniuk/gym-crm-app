@@ -1,4 +1,4 @@
-package com.training.gym.trainee;
+package com.training.gym.trainee.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

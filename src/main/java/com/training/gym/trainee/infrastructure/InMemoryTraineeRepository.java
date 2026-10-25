@@ -1,6 +1,6 @@
 package com.training.gym.trainee.infrastructure;
 
-import com.training.gym.trainee.Trainee;
+import com.training.gym.trainee.domain.Trainee;
 import com.training.gym.trainee.repository.TraineeRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;

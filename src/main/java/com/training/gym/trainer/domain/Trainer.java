@@ -1,6 +1,6 @@
-package com.training.gym.trainer;
+package com.training.gym.trainer.domain;
 
-import com.training.gym.training.TrainingType;
+import com.training.gym.training.domain.TrainingType;
 import com.training.gym.user.domain.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
