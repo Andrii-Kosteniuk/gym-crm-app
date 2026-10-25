@@ -2,6 +2,7 @@ package com.training.gym.trainee.infrastructure;
 
 import com.training.gym.trainee.domain.Trainee;
 import com.training.gym.trainee.repository.TraineeRepository;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,7 @@ import java.util.Optional;
 @Repository
 public class InMemoryTraineeRepository implements TraineeRepository {
 
+    @Getter
     private Map<Long, Trainee> storage;
 
     @Autowired
