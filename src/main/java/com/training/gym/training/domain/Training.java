@@ -1,15 +1,13 @@
 package com.training.gym.training.domain;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Duration;
 import java.time.LocalDate;
 
 @NoArgsConstructor
 @AllArgsConstructor
+@EqualsAndHashCode
 @Getter
 @Setter
 public class Training {
@@ -21,6 +19,24 @@ public class Training {
     private TrainingType type;
     private LocalDate date;
     private Duration duration;
+
+    @Override
+    public String toString() {
+        return """
+                Training {
+                %d,
+                %d,
+                %d,
+                    name: %s,
+                    type: %s
+                """.formatted(
+                id,
+                traineeId,
+                trainerId,
+                name,
+                type.getName()
+        );
+    }
 }
 
 
