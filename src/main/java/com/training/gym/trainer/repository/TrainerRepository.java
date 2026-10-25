@@ -5,6 +5,7 @@ import com.training.gym.trainer.domain.Trainer;
 
 public interface TrainerRepository extends CrudRepository<Trainer, Long> {
 
+    boolean existsByUserName(String userName);
 }
 
 
