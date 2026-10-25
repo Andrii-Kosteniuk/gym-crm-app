@@ -105,7 +105,7 @@ class InMemoryTraineeRepositoryTest {
         // Arrange
         Trainee secondTrainee = new Trainee();
         secondTrainee.setId(2L);
-        secondTrainee.setUserName("john.smith");
+        secondTrainee.setUserName("james.bond");
 
         repository.save(trainee);
         repository.save(secondTrainee);
