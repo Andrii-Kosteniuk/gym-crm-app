@@ -44,4 +44,9 @@ public class InMemoryTrainerRepository implements TrainerRepository {
     public void deleteById(Long id) {
         storage.remove(id);
     }
+
+    @Override
+    public boolean existsByUserName(String userName) {
+        return storage.values().stream().anyMatch(entity -> entity.getUserName().equals(userName));
+    }
 }
