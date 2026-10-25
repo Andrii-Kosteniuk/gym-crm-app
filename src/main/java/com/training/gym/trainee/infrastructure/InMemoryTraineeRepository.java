@@ -20,10 +20,10 @@ public class InMemoryTraineeRepository implements TraineeRepository {
         this.storage = storage;
     }
 
-
     @Override
     public Trainee save(Trainee entity) {
-        return storage.put(entity.getId(), entity);
+        storage.put(entity.getId(), entity);
+        return entity;
     }
 
     @Override
@@ -44,5 +44,18 @@ public class InMemoryTraineeRepository implements TraineeRepository {
     @Override
     public void deleteById(Long id) {
         storage.remove(id);
+    }
+
+    @Override
+    public boolean existsByUserName(String userName) {
+        return storage.values().stream().anyMatch(entity -> entity.getUserName().equals(userName));
+    }
+
+    @Override
+    public Optional<Trainee> findByUserName(String username) {
+        return storage.values()
+                .stream()
+                .filter(trainee -> trainee.getUserName().equals(username))
+                .findFirst();
     }
 }
