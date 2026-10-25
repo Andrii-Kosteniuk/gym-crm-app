@@ -24,7 +24,8 @@ public class InMemoryTrainerRepository implements TrainerRepository {
 
     @Override
     public Trainer save(Trainer entity) {
-        return storage.put(entity.getId(), entity);
+        storage.put(entity.getId(), entity);
+        return entity;
     }
 
     @Override
