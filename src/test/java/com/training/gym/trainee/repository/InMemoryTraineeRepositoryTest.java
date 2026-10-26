@@ -31,7 +31,7 @@ class InMemoryTraineeRepositoryTest {
 
         trainee = new Trainee();
         trainee.setId(1L);
-        trainee.setFirsName("Andrii");
+        trainee.setFirstName("Andrii");
         trainee.setLastName("Kosteniuk");
         trainee.setUserName("andrii.kosteniuk");
         trainee.setActive(true);
@@ -57,7 +57,7 @@ class InMemoryTraineeRepositoryTest {
 
         Trainee updated = new Trainee();
         updated.setId(1L);
-        updated.setFirsName("Andrew");
+        updated.setFirstName("Andrew");
         updated.setLastName("Kosteniuk");
         updated.setUserName("andrew.kosteniuk");
 
@@ -72,7 +72,7 @@ class InMemoryTraineeRepositoryTest {
                 "Andrew",
                 repository.findById(1L)
                         .orElseThrow()
-                        .getFirsName()
+                        .getFirstName()
         );
     }
 
