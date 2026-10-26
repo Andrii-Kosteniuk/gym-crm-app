@@ -53,7 +53,7 @@ public class TrainerServiceImpl implements TrainerService {
         trainer.setId(idGenerator.generate());
         trainer.setPassword(passwordGenerator.generate());
 
-        String uniqUserName = usernameGenerator.generate(trainerDto.firsName(), trainerDto.lastName(), this::usernameExists);
+        String uniqUserName = usernameGenerator.generate(trainerDto.firstName(), trainerDto.lastName(), this::usernameExists);
         trainer.setUserName(uniqUserName);
         trainer.setActive(true);
 

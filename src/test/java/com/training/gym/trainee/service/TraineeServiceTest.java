@@ -355,7 +355,7 @@ class TraineeServiceTest {
                 UpdateTraineeDto source = invocation.getArgument(0);
                 Trainee target = invocation.getArgument(1);
 
-                target.setFirstName(source.firsName());
+                target.setFirstName(source.firstName());
                 target.setLastName(source.lastName());
                 target.setDateOfBirth(source.dateOfBirth());
                 target.setAddress(source.address());
