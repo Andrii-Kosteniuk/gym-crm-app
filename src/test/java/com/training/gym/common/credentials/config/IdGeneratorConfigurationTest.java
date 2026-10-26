@@ -6,7 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 @SpringBootTest
 public class IdGeneratorConfigurationTest {
@@ -26,13 +26,15 @@ public class IdGeneratorConfigurationTest {
     @Test
     void shouldGenerateIndependentIdsForEachEntityType() {
         // Act & Assert
-        assertEquals(1L, traineeIdGenerator.generate());
-        assertEquals(2L, traineeIdGenerator.generate());
 
-        assertEquals(1L, trainerIdGenerator.generate());
-        assertEquals(2L, trainerIdGenerator.generate());
+        // Because of that fact that storages are initialized the Ids sequence is changed
+        assertNotSame(1L, traineeIdGenerator.generate());
+        assertNotSame(2L, traineeIdGenerator.generate());
 
-        assertEquals(1L, trainingIdGenerator.generate());
-        assertEquals(2L, trainingIdGenerator.generate());
+        assertNotSame(1L, trainerIdGenerator.generate());
+        assertNotSame(2L, trainerIdGenerator.generate());
+
+        assertNotSame(1L, trainingIdGenerator.generate());
+        assertNotSame(2L, trainingIdGenerator.generate());
     }
 }
