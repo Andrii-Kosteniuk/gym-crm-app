@@ -4,12 +4,14 @@ import com.training.gym.common.credentials.generator.IdGenerator;
 import com.training.gym.common.credentials.generator.PasswordGenerator;
 import com.training.gym.common.credentials.generator.UsernameGenerator;
 import com.training.gym.common.exception.EntityNotFoundException;
+import com.training.gym.common.exception.ResourceConflictException;
 import com.training.gym.trainee.domain.Trainee;
 import com.training.gym.trainee.dto.CreateTraineeDto;
 import com.training.gym.trainee.dto.UpdateTraineeDto;
 import com.training.gym.trainee.mapper.TraineeMapper;
 import com.training.gym.trainee.repository.TraineeRepository;
 import com.training.gym.trainer.repository.TrainerRepository;
+import com.training.gym.training.repository.TrainingRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -22,19 +24,21 @@ public class TraineeServiceImpl implements TraineeService {
 
     private final TraineeRepository traineeRepository;
     private final TrainerRepository trainerRepository;
+    private final TrainingRepository trainingRepository;
     private final TraineeMapper traineeMapper;
     private final IdGenerator idGenerator;
     private final UsernameGenerator usernameGenerator;
     private final PasswordGenerator passwordGenerator;
 
     public TraineeServiceImpl(TraineeRepository traineeRepository,
-                              TrainerRepository trainerRepository,
+                              TrainerRepository trainerRepository, TrainingRepository trainingRepository,
                               TraineeMapper traineeMapper,
                               @Qualifier("traineeIdGenerator") IdGenerator idGenerator,
                               UsernameGenerator usernameGenerator,
                               PasswordGenerator passwordGenerator) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
+        this.trainingRepository = trainingRepository;
         this.traineeMapper = traineeMapper;
         this.idGenerator = idGenerator;
         this.usernameGenerator = usernameGenerator;
@@ -102,6 +106,18 @@ public class TraineeServiceImpl implements TraineeService {
 
             throw new EntityNotFoundException(
                     "Trainee with id %d not found".formatted(id)
+            );
+        }
+
+        if (trainingRepository.existsByTraineeOrTrainerId(id)) {
+            log.warn(
+                    "Trainee deletion rejected because related trainings exist: id={}",
+                    id
+            );
+
+            throw new ResourceConflictException(
+                    "Cannot delete trainee with id %d because related trainings exist"
+                            .formatted(id)
             );
         }
 

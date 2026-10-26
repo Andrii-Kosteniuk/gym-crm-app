@@ -5,6 +5,7 @@ import com.training.gym.training.domain.Training;
 
 public interface TrainingRepository extends CrudRepository<Training, Long> {
 
+    boolean existsByTraineeOrTrainerId(Long id);
 }
 
 
