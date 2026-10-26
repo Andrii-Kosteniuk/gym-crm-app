@@ -1,4 +1,4 @@
-package com.training.gym.config;
+package com.training.gym.common.credentials.config;
 
 import com.training.gym.common.credentials.IdGeneratorImpl;
 import com.training.gym.common.credentials.generator.IdGenerator;
