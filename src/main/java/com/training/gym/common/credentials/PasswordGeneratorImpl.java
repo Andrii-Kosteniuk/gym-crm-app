@@ -8,10 +8,10 @@ import java.security.SecureRandom;
 @Component
 public class PasswordGeneratorImpl implements PasswordGenerator {
 
-    private static final String CHARACTERS = """ 
-             ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-             abcdefghijklmnopqrstuvwxyz"
-            0123456789""";
+    private static final String CHARACTERS =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                    + "abcdefghijklmnopqrstuvwxyz"
+                    + "0123456789";
 
     private static final int PASSWORD_LENGTH = 10;
 
