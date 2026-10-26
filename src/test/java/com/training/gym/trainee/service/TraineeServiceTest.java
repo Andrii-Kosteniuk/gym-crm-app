@@ -80,7 +80,7 @@ class TraineeServiceTest {
 
         trainee = new Trainee();
         trainee.setId(TRAINEE_ID);
-        trainee.setFirsName("Andrii");
+        trainee.setFirstName("Andrii");
         trainee.setLastName("Kosteniuk");
         trainee.setUserName(USERNAME);
         trainee.setPassword(PASSWORD);
@@ -129,7 +129,7 @@ class TraineeServiceTest {
 
             assertAll(
                     () -> assertEquals(TRAINEE_ID, result.getId()),
-                    () -> assertEquals("Andrii", result.getFirsName()),
+                    () -> assertEquals("Andrii", result.getFirstName()),
                     () -> assertEquals("Kosteniuk", result.getLastName()),
                     () -> assertEquals(USERNAME, result.getUserName()),
                     () -> assertEquals(PASSWORD, result.getPassword()),
@@ -293,7 +293,7 @@ class TraineeServiceTest {
             // Arrange
             Trainee newTrainee = new Trainee();
 
-            newTrainee.setFirsName("Andrii");
+            newTrainee.setFirstName("Andrii");
             newTrainee.setLastName("Kosteniuk");
 
             when(traineeMapper.toTrainee(createDto))
@@ -355,7 +355,7 @@ class TraineeServiceTest {
                 UpdateTraineeDto source = invocation.getArgument(0);
                 Trainee target = invocation.getArgument(1);
 
-                target.setFirsName(source.firsName());
+                target.setFirstName(source.firsName());
                 target.setLastName(source.lastName());
                 target.setDateOfBirth(source.dateOfBirth());
                 target.setAddress(source.address());
@@ -373,7 +373,7 @@ class TraineeServiceTest {
             assertNotNull(result);
 
             assertAll(
-                    () -> assertEquals("Andrew", result.getFirsName()),
+                    () -> assertEquals("Andrew", result.getFirstName()),
                     () -> assertEquals("Kosteniuk", result.getLastName()),
                     () -> assertEquals(USERNAME, result.getUserName()),
                     () -> assertEquals(TRAINEE_ID, result.getId())

@@ -78,7 +78,7 @@ class TrainerServiceImplTest {
         specialization = new TrainingType(1L, "Health");
 
         trainer = new Trainer();
-        trainer.setFirsName("Andrii");
+        trainer.setFirstName("Andrii");
         trainer.setLastName("Kosteniuk");
         trainer.setSpecialization(specialization);
 
@@ -127,7 +127,7 @@ class TrainerServiceImplTest {
 
             assertAll(
                     () -> assertEquals(ID, result.getId()),
-                    () -> assertEquals("Andrii", result.getFirsName()),
+                    () -> assertEquals("Andrii", result.getFirstName()),
                     () -> assertEquals("Kosteniuk", result.getLastName()),
                     () -> assertEquals(USERNAME, result.getUserName()),
                     () -> assertEquals(PASSWORD, result.getPassword()),
@@ -344,7 +344,7 @@ class TrainerServiceImplTest {
                 UpdateTrainerDto source = invocation.getArgument(0);
                 Trainer target = invocation.getArgument(1);
 
-                target.setFirsName(source.firsName());
+                target.setFirstName(source.firsName());
                 target.setLastName(source.lastName());
                 target.setSpecialization(source.specialization());
 
@@ -361,7 +361,7 @@ class TrainerServiceImplTest {
             assertNotNull(result);
 
             assertAll(
-                    () -> assertEquals("Andrew", result.getFirsName()),
+                    () -> assertEquals("Andrew", result.getFirstName()),
                     () -> assertEquals("Kosteniuk", result.getLastName()),
                     () -> assertEquals(ID, result.getId()),
                     () -> assertEquals(USERNAME, result.getUserName()),

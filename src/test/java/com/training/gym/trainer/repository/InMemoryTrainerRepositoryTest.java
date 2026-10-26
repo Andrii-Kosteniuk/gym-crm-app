@@ -30,7 +30,7 @@ class InMemoryTrainerRepositoryTest {
 
         trainer = new Trainer();
         trainer.setId(TRAINER_ID);
-        trainer.setFirsName("Andrii");
+        trainer.setFirstName("Andrii");
         trainer.setLastName("Kosteniuk");
         trainer.setUserName(USERNAME);
         trainer.setActive(true);
@@ -59,7 +59,7 @@ class InMemoryTrainerRepositoryTest {
 
             Trainer updated = new Trainer();
             updated.setId(TRAINER_ID);
-            updated.setFirsName("Andrew");
+            updated.setFirstName("Andrew");
             updated.setLastName("Kosteniuk");
             updated.setUserName("andrew.kosteniuk");
 
@@ -75,7 +75,7 @@ class InMemoryTrainerRepositoryTest {
                     "Andrew",
                     repository.findById(TRAINER_ID)
                             .orElseThrow()
-                            .getFirsName()
+                            .getFirstName()
             );
         }
     }
@@ -116,7 +116,7 @@ class InMemoryTrainerRepositoryTest {
             // Arrange
             Trainer secondTrainer = new Trainer();
             secondTrainer.setId(2L);
-            secondTrainer.setFirsName("Andrii");
+            secondTrainer.setFirstName("Andrii");
             secondTrainer.setLastName("Kosteniuk");
             secondTrainer.setUserName("andrii.kosteniuk");
 
@@ -276,7 +276,7 @@ class InMemoryTrainerRepositoryTest {
             // Arrange
             Trainer secondTrainer = new Trainer();
             secondTrainer.setId(2L);
-            secondTrainer.setFirsName("James");
+            secondTrainer.setFirstName("James");
             secondTrainer.setLastName("Bond");
             secondTrainer.setUserName("james.bond");
 

@@ -1,0 +1,3 @@
+gym:
+  storage:
+    initial-data-file: file:./gym-data.json

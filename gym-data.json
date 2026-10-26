@@ -1,0 +1,62 @@
+{
+  "trainees": [
+    {
+      "id": 1,
+      "firstName": "James",
+      "lastName": "Bond",
+      "userName": "james.bond",
+      "password": "James12345",
+      "active": true,
+      "dateOfBirth": "1995-05-12",
+      "address": {
+        "city": "Wroclaw",
+        "street": "Main Street",
+        "buildNumber": 10,
+        "zipcode": "50-001"
+      }
+    },
+    {
+      "id": 2,
+      "firstName": "Alina",
+      "lastName": "Bond",
+      "userName": "alina.bond",
+      "password": "Alina123451",
+      "active": true,
+      "dateOfBirth": "1998-03-20",
+      "address": {
+        "city": "Warsaw",
+        "street": "Central Street",
+        "buildNumber": 25,
+        "zipcode": "00-001"
+      }
+    }
+  ],
+  "trainers": [
+    {
+      "id": 1,
+      "firstName": "Michael",
+      "lastName": "Born",
+      "userName": "michael.born",
+      "password": "Michael12345",
+      "active": true,
+      "specialization": {
+        "id": 1,
+        "name": "Power"
+      }
+    }
+  ],
+  "trainings": [
+    {
+      "id": 1,
+      "traineeId": 1,
+      "trainerId": 1,
+      "name": "Strength Training",
+      "type": {
+        "id": 1,
+        "name": "Power"
+      },
+      "date": "2026-10-26",
+      "duration": 60
+    }
+  ]
+}

@@ -10,7 +10,7 @@ import lombok.*;
 public abstract class User {
 
     private Long id;
-    private String firsName;
+    private String firstName;
     private String lastName;
     private String userName;
     private String password;
@@ -27,7 +27,7 @@ public abstract class User {
                 active: %s
                 """.formatted(
                 id,
-                firsName,
+                firstName,
                 lastName,
                 userName,
                 active
