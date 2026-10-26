@@ -16,11 +16,12 @@ import java.io.InputStream;
 @Configuration(proxyBeanMethods = false)
 public class InitializationConfiguration {
 
-    @Value("${gym.storage.initial-data-file}")
-    private String location;
+    private InitializationConfiguration() {
+    }
 
     @Bean
-    public BeanPostProcessor storageInitializationPostProcessor() {
+    public static BeanPostProcessor storageInitializationPostProcessor(
+            @Value("${gym.storage.initial-data-file}") String location) {
 
         ObjectMapper mapper = JsonMapper.builder()
                 .findAndAddModules()

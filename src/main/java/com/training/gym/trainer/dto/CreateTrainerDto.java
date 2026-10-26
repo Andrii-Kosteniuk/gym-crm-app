@@ -6,7 +6,7 @@ import com.training.gym.training.domain.TrainingType;
 import java.time.LocalDate;
 
 public record CreateTrainerDto(
-        String firsName,
+        String firstName,
         String lastName,
         LocalDate dateOfBirth,
         Address address,

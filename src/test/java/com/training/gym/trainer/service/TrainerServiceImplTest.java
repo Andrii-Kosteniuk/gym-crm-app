@@ -344,7 +344,7 @@ class TrainerServiceImplTest {
                 UpdateTrainerDto source = invocation.getArgument(0);
                 Trainer target = invocation.getArgument(1);
 
-                target.setFirstName(source.firsName());
+                target.setFirstName(source.firstName());
                 target.setLastName(source.lastName());
                 target.setSpecialization(source.specialization());
 

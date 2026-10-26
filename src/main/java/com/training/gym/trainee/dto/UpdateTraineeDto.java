@@ -5,7 +5,7 @@ import com.training.gym.trainee.domain.Address;
 import java.time.LocalDate;
 
 public record UpdateTraineeDto(
-        String firsName,
+        String firstName,
         String lastName,
         String userName,
         LocalDate dateOfBirth,

@@ -55,7 +55,7 @@ public class TraineeServiceImpl implements TraineeService {
         trainee.setId(idGenerator.generate());
         trainee.setPassword(passwordGenerator.generate());
 
-        String uniqUserName = usernameGenerator.generate(traineeDto.firsName(), traineeDto.lastName(), this::usernameExists);
+        String uniqUserName = usernameGenerator.generate(traineeDto.firstName(), traineeDto.lastName(), this::usernameExists);
         trainee.setUserName(uniqUserName);
         trainee.setActive(true);
 
