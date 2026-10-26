@@ -4,6 +4,7 @@ import com.training.gym.common.credentials.generator.IdGenerator;
 import com.training.gym.common.credentials.generator.PasswordGenerator;
 import com.training.gym.common.credentials.generator.UsernameGenerator;
 import com.training.gym.common.exception.EntityNotFoundException;
+import com.training.gym.common.exception.ResourceConflictException;
 import com.training.gym.trainee.domain.Address;
 import com.training.gym.trainee.domain.Trainee;
 import com.training.gym.trainee.dto.CreateTraineeDto;
@@ -11,6 +12,7 @@ import com.training.gym.trainee.dto.UpdateTraineeDto;
 import com.training.gym.trainee.mapper.TraineeMapper;
 import com.training.gym.trainee.repository.TraineeRepository;
 import com.training.gym.trainer.repository.TrainerRepository;
+import com.training.gym.training.repository.TrainingRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -34,11 +36,15 @@ import static org.mockito.Mockito.*;
 class TraineeServiceTest {
 
     private static final Long TRAINEE_ID = 1L;
+    private static final Long TRAINING_ID = 1L;
     private static final String USERNAME = "andrii.kosteniuk";
     private static final String PASSWORD = "secure-password";
 
     @Mock
     private TraineeRepository traineeRepository;
+
+    @Mock
+    private TrainingRepository trainingRepository;
 
     @Mock
     private TrainerRepository trainerRepository;
@@ -504,19 +510,26 @@ class TraineeServiceTest {
     class DeleteTraineeTests {
 
         @Test
-        void shouldDeleteTraineeSuccessfully() {
+        void shouldRemoveTraineeWhenNoRelatedTrainingsExist() {
+
             // Arrange
-            when(traineeRepository.existsById(TRAINEE_ID))
+            when(traineeRepository.existsById(TRAINING_ID))
                     .thenReturn(true);
 
+            when(trainingRepository.existsByTraineeOrTrainerId(TRAINING_ID))
+                    .thenReturn(false);
+
             // Act
-            traineeService.removeTrainee(TRAINEE_ID);
+            traineeService.removeTrainee(TRAINING_ID);
 
             // Assert
-            verify(traineeRepository).existsById(TRAINEE_ID);
-            verify(traineeRepository).deleteById(TRAINEE_ID);
-        }
+            verify(traineeRepository).existsById(TRAINING_ID);
 
+            verify(trainingRepository)
+                    .existsByTraineeOrTrainerId(TRAINING_ID);
+
+            verify(traineeRepository).deleteById(TRAINING_ID);
+        }
         @Test
         void shouldThrowExceptionWhenDeletingNonexistentTrainee() {
             // Arrange
@@ -554,6 +567,38 @@ class TraineeServiceTest {
             );
 
             verifyNoInteractions(traineeRepository);
+        }
+
+        @Test
+        void shouldThrowConflictExceptionWhenTraineeHasRelatedTrainings() {
+            // Arrange
+            Long traineeId = 1L;
+
+            when(traineeRepository.existsById(traineeId))
+                    .thenReturn(true);
+
+            when(trainingRepository.existsByTraineeOrTrainerId(traineeId))
+                    .thenReturn(true);
+
+            // Act
+            ResourceConflictException exception = assertThrows(
+                    ResourceConflictException.class,
+                    () -> traineeService.removeTrainee(traineeId)
+            );
+
+            // Assert
+            assertEquals(
+                    "Cannot delete trainee with id 1 because related trainings exist",
+                    exception.getMessage()
+            );
+
+            verify(traineeRepository).existsById(traineeId);
+
+            verify(trainingRepository)
+                    .existsByTraineeOrTrainerId(traineeId);
+
+            verify(traineeRepository, never())
+                    .deleteById(anyLong());
         }
     }
 }
