@@ -10,14 +10,13 @@ import com.training.gym.trainer.dto.CreateTrainerDto;
 import com.training.gym.trainer.dto.UpdateTrainerDto;
 import com.training.gym.trainer.mapper.TrainerMapper;
 import com.training.gym.trainer.repository.TrainerRepository;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class TrainerServiceImpl implements TrainerService {
 
@@ -27,6 +26,22 @@ public class TrainerServiceImpl implements TrainerService {
     private final IdGenerator idGenerator;
     private final UsernameGenerator usernameGenerator;
     private final PasswordGenerator passwordGenerator;
+
+    public TrainerServiceImpl(
+            TrainerRepository trainerRepository,
+            TraineeRepository traineeRepository,
+            TrainerMapper trainerMapper,
+            @Qualifier("trainerIdGenerator") IdGenerator idGenerator,
+            UsernameGenerator usernameGenerator,
+            PasswordGenerator passwordGenerator
+    ) {
+        this.trainerRepository = trainerRepository;
+        this.traineeRepository = traineeRepository;
+        this.trainerMapper = trainerMapper;
+        this.idGenerator = idGenerator;
+        this.usernameGenerator = usernameGenerator;
+        this.passwordGenerator = passwordGenerator;
+    }
 
     @Override
     public Trainer createTrainer(CreateTrainerDto trainerDto) {

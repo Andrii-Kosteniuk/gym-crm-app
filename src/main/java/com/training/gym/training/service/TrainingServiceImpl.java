@@ -8,12 +8,12 @@ import com.training.gym.training.mapper.TrainingMapper;
 import com.training.gym.training.repository.TrainingRepository;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class TrainingServiceImpl implements TrainingService {
 
@@ -21,6 +21,14 @@ public class TrainingServiceImpl implements TrainingService {
     private final IdGenerator idGenerator;
     private final TrainingMapper trainingMapper;
 
+    public TrainingServiceImpl(TrainingRepository trainingRepository,
+                               @Qualifier("trainingIdGenerator")
+                               IdGenerator idGenerator,
+                               TrainingMapper trainingMapper) {
+        this.trainingRepository = trainingRepository;
+        this.idGenerator = idGenerator;
+        this.trainingMapper = trainingMapper;
+    }
 
     @Override
     public Training createTraining(CreateTrainingDto trainingDto) {
