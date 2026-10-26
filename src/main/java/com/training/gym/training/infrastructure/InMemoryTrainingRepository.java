@@ -2,6 +2,7 @@ package com.training.gym.training.infrastructure;
 
 import com.training.gym.training.domain.Training;
 import com.training.gym.training.repository.TrainingRepository;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Repository;
@@ -13,6 +14,7 @@ import java.util.Optional;
 @Repository
 public class InMemoryTrainingRepository implements TrainingRepository {
 
+    @Getter
     private Map<Long, Training> storage;
 
     @Autowired
@@ -22,7 +24,8 @@ public class InMemoryTrainingRepository implements TrainingRepository {
 
     @Override
     public Training save(Training entity) {
-        return storage.put(entity.getId(), entity);
+        storage.put(entity.getId(), entity);
+        return entity;
     }
 
     @Override
