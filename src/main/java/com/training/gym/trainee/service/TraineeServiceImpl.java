@@ -10,26 +10,38 @@ import com.training.gym.trainee.dto.UpdateTraineeDto;
 import com.training.gym.trainee.mapper.TraineeMapper;
 import com.training.gym.trainee.repository.TraineeRepository;
 import com.training.gym.trainer.repository.TrainerRepository;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
 
 @Service
-@AllArgsConstructor
 @Slf4j
 public class TraineeServiceImpl implements TraineeService {
 
-    private TraineeRepository traineeRepository;
-    private TrainerRepository trainerRepository;
-    private TraineeMapper traineeMapper;
-    private IdGenerator idGenerator;
-    private UsernameGenerator usernameGenerator;
-    private PasswordGenerator passwordGenerator;
+    private final TraineeRepository traineeRepository;
+    private final TrainerRepository trainerRepository;
+    private final TraineeMapper traineeMapper;
+    private final IdGenerator idGenerator;
+    private final UsernameGenerator usernameGenerator;
+    private final PasswordGenerator passwordGenerator;
+
+    public TraineeServiceImpl(TraineeRepository traineeRepository,
+                              TrainerRepository trainerRepository,
+                              TraineeMapper traineeMapper,
+                              @Qualifier("traineeIdGenerator") IdGenerator idGenerator,
+                              UsernameGenerator usernameGenerator,
+                              PasswordGenerator passwordGenerator) {
+        this.traineeRepository = traineeRepository;
+        this.trainerRepository = trainerRepository;
+        this.traineeMapper = traineeMapper;
+        this.idGenerator = idGenerator;
+        this.usernameGenerator = usernameGenerator;
+        this.passwordGenerator = passwordGenerator;
+    }
 
     @Override
-
     public Trainee createTrainee(CreateTraineeDto traineeDto) {
         log.debug("Creating trainee profile");
         Objects.requireNonNull(traineeDto, "Create trainee DTO must not be null");
