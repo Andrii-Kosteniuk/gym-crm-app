@@ -5,7 +5,6 @@ import com.training.gym.model.Trainer;
 import com.training.gym.model.Training;
 
 import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.config.BeanPostProcessor;
 
 import java.util.List;
@@ -23,7 +22,7 @@ public final class StorageInitializationPostProcessor implements BeanPostProcess
     }
 
     @Override
-    public Object postProcessAfterInitialization(@NonNull Object bean, String beanName ) {
+    public Object postProcessAfterInitialization(Object bean, String beanName ) {
 
         switch (beanName) {
             case "traineeStorage" -> initialize(
