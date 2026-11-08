@@ -8,7 +8,8 @@ import org.springframework.context.annotation.Import;
         ApplicationPropertiesConfig.class,
         DataSourceConfig.class,
         FlywayConfig.class,
-        JpaConfig.class
+        JpaConfig.class,
+        ValidationConfig.class
 })
 public class PersistenceConfig {
 }
