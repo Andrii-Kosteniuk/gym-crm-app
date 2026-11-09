@@ -51,7 +51,7 @@ CREATE TABLE trainings
     name             VARCHAR(200) NOT NULL,
     training_type_id BIGINT       NOT NULL,
     training_date    DATE         NOT NULL,
-    duration_minutes INTEGER      NOT NULL,
+    duration_minutes NUMERIC      NOT NULL,
     CONSTRAINT fk_trainings_trainee FOREIGN KEY (trainee_id) REFERENCES trainees (id) ON DELETE CASCADE,
     CONSTRAINT fk_trainings_trainer FOREIGN KEY (trainer_id) REFERENCES trainers (id),
     CONSTRAINT fk_trainings_type FOREIGN KEY (training_type_id) REFERENCES training_types (id),
