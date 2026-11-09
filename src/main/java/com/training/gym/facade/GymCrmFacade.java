@@ -1,15 +1,16 @@
 package com.training.gym.facade;
 
-import com.training.gym.model.Trainee;
+import com.training.gym.dto.auth.Credentials;
 import com.training.gym.dto.trainee.CreateTraineeDto;
 import com.training.gym.dto.trainee.UpdateTraineeDto;
-import com.training.gym.service.TraineeService;
-import com.training.gym.model.Trainer;
 import com.training.gym.dto.trainer.CreateTrainerDto;
 import com.training.gym.dto.trainer.UpdateTrainerDto;
-import com.training.gym.service.TrainerService;
-import com.training.gym.model.Training;
 import com.training.gym.dto.training.CreateTrainingDto;
+import com.training.gym.model.Trainee;
+import com.training.gym.model.Trainer;
+import com.training.gym.model.Training;
+import com.training.gym.service.TraineeService;
+import com.training.gym.service.TrainerService;
 import com.training.gym.service.TrainingService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -26,32 +27,32 @@ public class GymCrmFacade {
         return traineeService.createTrainee(dto);
     }
 
-    public Trainee updateTrainee(UpdateTraineeDto dto) {
-        return traineeService.updateTrainee(dto);
+    public Trainee updateTrainee(Credentials credentials, UpdateTraineeDto dto) {
+        return traineeService.updateTrainee(credentials, dto);
     }
 
-    public Trainee getTraineeById(Long id) {
-        return traineeService.getTraineeById(id);
+    public Trainee getTraineeById(Credentials credentials, Long id) {
+        return traineeService.getTraineeById(credentials, id);
     }
 
-    public void deleteTrainee(Long id) {
-        traineeService.removeTrainee(id);
+    public void deleteTraineeByUserName(Credentials credentials, String username) {
+        traineeService.removeTraineeByUsername(credentials, username);
     }
 
     public Trainer createTrainer(CreateTrainerDto dto) {
         return trainerService.createTrainer(dto);
     }
 
-    public Trainer updateTrainer(UpdateTrainerDto dto) {
-        return trainerService.updateTrainer(dto);
+    public Trainer updateTrainer(Credentials credentials, UpdateTrainerDto dto) {
+        return trainerService.updateTrainer(credentials, dto);
     }
 
-    public Trainer getTrainerById(Long id) {
-        return trainerService.getTrainerById(id);
+    public Trainer getTrainerById(Credentials credentials, Long id) {
+        return trainerService.getTrainerById(credentials, id);
     }
 
-    public Training createTraining(CreateTrainingDto dto) {
-        return trainingService.createTraining(dto);
+    public Training createTraining(Credentials credentials, CreateTrainingDto dto) {
+        return trainingService.createTraining(credentials, dto);
     }
 
     public Training getTrainingById(Long id) {
