@@ -2,7 +2,6 @@
 package com.training.gym.validation;
 
 import com.training.gym.dto.training.CreateTrainingDto;
-import com.training.gym.model.TrainingType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -18,12 +17,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class TrainingDtoValidatorTest {
 
     private TrainingDtoValidator validator;
-    private TrainingType type;
 
     @BeforeEach
     void setUp() {
         validator = new TrainingDtoValidator();
-        type = new TrainingType(1L, "Strength");
     }
 
     private CreateTrainingDto validDto() {
@@ -31,7 +28,7 @@ class TrainingDtoValidatorTest {
                 1L,
                 2L,
                 "Strength Training",
-                type,
+                1L,
                 LocalDate.of(2026, 11, 10),
                 Duration.ofMinutes(60)
         );
@@ -53,7 +50,7 @@ class TrainingDtoValidatorTest {
                     1L,
                     2L,
                     "Strength Training",
-                    type,
+                    1L,
                     LocalDate.of(2020, 1, 1),
                     Duration.ofMinutes(60)
             );
@@ -69,7 +66,7 @@ class TrainingDtoValidatorTest {
                     1L,
                     2L,
                     "Strength Training",
-                    type,
+                    1L,
                     LocalDate.of(2026, 11, 10),
                     Duration.ofSeconds(1)
             );
@@ -100,7 +97,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNullTraineeId() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     null, 2L, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(60)
             );
 
@@ -119,7 +116,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNullTrainerId() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, null, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(60)
             );
 
@@ -139,7 +136,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNonPositiveTraineeId(long traineeId) {
             CreateTrainingDto dto = new CreateTrainingDto(
                     traineeId, 2L, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(60)
             );
 
@@ -159,7 +156,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNonPositiveTrainerId(long trainerId) {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, trainerId, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(60)
             );
 
@@ -180,7 +177,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectBlankTrainingName(String name) {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, name,
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(60)
             );
 
@@ -218,7 +215,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNullTrainingDate() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
-                    type, null, Duration.ofMinutes(60)
+                    1L, null, Duration.ofMinutes(60)
             );
 
             IllegalArgumentException exception = assertThrows(
@@ -236,7 +233,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNullDuration() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10), null
+                    1L, LocalDate.of(2026, 11, 10), null
             );
 
             IllegalArgumentException exception = assertThrows(
@@ -254,7 +251,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectZeroDuration() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ZERO
             );
 
@@ -273,7 +270,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNegativeDuration() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
-                    type, LocalDate.of(2026, 11, 10),
+                    1L, LocalDate.of(2026, 11, 10),
                     Duration.ofMinutes(-30)
             );
 

@@ -16,7 +16,7 @@ public class TrainingDtoValidator {
 
         requireNotBlank(dto.name(), "Training name");
 
-        requireNotNull(dto.type(), "Training type");
+        requireNotNull(dto.trainingTypeId(), "Training type");
         requireNotNull(dto.date(), "Training date");
 
         requirePositiveDuration(dto.duration());
