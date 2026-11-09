@@ -11,14 +11,21 @@ public interface TrainerRepository extends CrudRepository<Trainer, Long> {
 
     Trainer update(Trainer trainer);
 
-    Optional<Trainer> findByUsername(String username);
+    Optional<Trainer> findByUserName(String username);
 
     void delete(Trainer trainer);
 
     void deleteByUsername(String username);
 
+    void activateTrainer(Trainer trainer);
+
+    void deactivateTrainer(Trainer trainer);
+
     List<Training> findTrainings(String username, TrainerTrainingCriteria criteria);
+
+    List<Trainer> findUnassignedTrainers(String username);
 }
+
 
 
 
