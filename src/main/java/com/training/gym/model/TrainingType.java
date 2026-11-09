@@ -1,9 +1,6 @@
 package com.training.gym.model;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -20,10 +17,11 @@ import lombok.NoArgsConstructor;
 public class TrainingType {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank
     @Size(max = 100)
-    @Column(name = "training_type_name", nullable = false, unique = true, length = 100)
+    @Column(name = "name", nullable = false, unique = true, length = 100)
     private String name;
 }

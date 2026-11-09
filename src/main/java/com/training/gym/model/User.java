@@ -3,20 +3,19 @@ package com.training.gym.model;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
 @Table(name = "users")
 @Getter
+@Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
 public class User {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @NotBlank
@@ -36,10 +35,27 @@ public class User {
     private String userName;
 
     @NotBlank
-    @Column(name = "password_hash", nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    public void activate() {
+        if (active) {
+            throw new IllegalStateException("Profile is already active");
+        }
+
+        active = true;
+    }
+
+    public void deactivate() {
+        if (!active) {
+            throw new IllegalStateException("Profile is already inactive");
+        }
+
+        active = false;
+    }
 
 }

@@ -4,10 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Past;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -18,6 +15,7 @@ import java.util.Set;
 @Entity
 @Table(name = "trainees")
 @Getter
+@Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -28,8 +26,9 @@ public class Trainee {
 
     @NotNull
     @Valid
-    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.PERSIST)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @MapsId
+    @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.ALL)
+    @JoinColumn(name = "id", nullable = false, unique = true)
     private User user;
 
     @Past
@@ -40,6 +39,7 @@ public class Trainee {
     @Valid
     private Address address;
 
+    @Builder.Default
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "trainee_trainers",
@@ -52,6 +52,7 @@ public class Trainee {
     )
     private Set<Trainer> trainers = new HashSet<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "trainee", fetch = FetchType.LAZY, cascade = CascadeType.REMOVE)
     private Set<Training> trainings = new HashSet<>();
 
@@ -70,6 +71,11 @@ public class Trainee {
         if (trainers.add(trainer)) {
             trainer.addTrainee(this);
         }
+    }
+
+    public void updateProfile(LocalDate dateOfBirth, Address address) {
+        this.dateOfBirth = dateOfBirth;
+        this.address = address;
     }
 
     public void removeTrainer(Trainer trainer) {

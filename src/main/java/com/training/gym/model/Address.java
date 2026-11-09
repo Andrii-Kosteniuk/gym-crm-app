@@ -29,6 +29,6 @@ public class Address {
     private Integer buildingNumber;
 
     @NotBlank
-    @Column(name = "zip_code", length = 20)
+    @Column(name = "zipcode", length = 20)
     private String zipCode;
 }

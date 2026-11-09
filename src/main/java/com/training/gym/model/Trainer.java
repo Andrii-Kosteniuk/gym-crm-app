@@ -3,10 +3,7 @@ package com.training.gym.model;
 import jakarta.persistence.*;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.Collections;
 import java.util.HashSet;
@@ -14,7 +11,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "trainers")
-@Getter
+@Getter @Setter
 @NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
@@ -25,8 +22,9 @@ public class Trainer {
 
     @NotNull
     @Valid
+    @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false, cascade = CascadeType.PERSIST)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "id", nullable = false, unique = true)
     private User user;
 
     @NotNull
@@ -34,9 +32,11 @@ public class Trainer {
     @JoinColumn(name = "specialization_id", nullable = false)
     private TrainingType specialization;
 
+    @Builder.Default
     @ManyToMany(mappedBy = "trainers", fetch = FetchType.LAZY)
     private Set<Trainee> trainees = new HashSet<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "trainer", fetch = FetchType.LAZY)
     private Set<Training> trainings = new HashSet<>();
 

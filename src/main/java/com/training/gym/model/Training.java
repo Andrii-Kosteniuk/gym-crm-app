@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.Duration;
 import java.time.LocalDate;
 
 @Entity
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 public class Training {
 
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
@@ -33,12 +35,12 @@ public class Training {
     @JoinColumn(name = "training_type_id", nullable = false)
     private TrainingType trainingType;
 
-    @Column(nullable = false)
+    @Column(name = "name", nullable = false)
     private String trainingName;
 
-    @Column(nullable = false)
+    @Column(name = "training_date", nullable = false)
     private LocalDate trainingDate;
 
-    @Column(nullable = false)
-    private Integer trainingDuration;
+    @Column(name = "duration_minutes", nullable = false)
+    private Duration trainingDuration;
 }
