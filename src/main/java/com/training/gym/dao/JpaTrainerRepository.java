@@ -7,7 +7,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,15 +14,15 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Repository
-@RequiredArgsConstructor
 public class JpaTrainerRepository implements TrainerRepository {
 
     private static final String NOT_NULL_ID_MESSAGE = "Trainer ID must not be null";
     public static final String TRAINER_MUST_NOT_BE_NULL = "Trainer must not be null";
     private static final String NOT_BLANK_USERNAME_MESSAGE = "Trainer username must not be blank";
+    public static final String USERNAME = "username";
 
     @PersistenceContext
-    private final EntityManager entityManager;
+    private EntityManager entityManager;
 
     @Override
     public Trainer save(Trainer trainer) {
@@ -69,17 +68,18 @@ public class JpaTrainerRepository implements TrainerRepository {
     }
 
     @Override
-    public Optional<Trainer> findByUsername(String username) {
+    public Optional<Trainer> findByUserName(String username) {
         validateUsername(username);
 
         return entityManager.createQuery("""
                         SELECT t
                         FROM Trainer t
                         JOIN FETCH t.user u
-                        WHERE u.userName = :username
+                        WHERE u.username = :username
                         """, Trainer.class)
-                .setParameter("username", username)
-                .getResultStream()
+                .setParameter(USERNAME, username)
+                .getResultList()
+                .stream()
                 .findFirst();
     }
 
@@ -100,11 +100,33 @@ public class JpaTrainerRepository implements TrainerRepository {
 
     @Override
     public void deleteByUsername(String username) {
-        Trainer trainee = findByUsername(username)
+        Trainer trainee = findByUserName(username)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Trainee not found: " + username));
 
         delete(trainee);
+    }
+
+    @Override
+    public void activateTrainer(Trainer trainer) {
+        Objects.requireNonNull(trainer, NOT_NULL_ID_MESSAGE);
+
+        Long id = trainer.getId();
+        entityManager.createQuery("""
+                        UPDATE Trainer t SET t.active = true WHERE t.id = :id
+                        """)
+                .setParameter("id", id);
+    }
+
+    @Override
+    public void deactivateTrainer(Trainer trainer) {
+        Objects.requireNonNull(trainer, NOT_NULL_ID_MESSAGE);
+
+        Long id = trainer.getId();
+        entityManager.createQuery("""
+                        UPDATE Trainer t SET t.active = false WHERE t.id = :id
+                        """)
+                .setParameter("id", id);
     }
 
     @Override
@@ -147,7 +169,7 @@ public class JpaTrainerRepository implements TrainerRepository {
                 Training.class
         );
 
-        query.setParameter("username", username);
+        query.setParameter(USERNAME, username);
 
         if (criteria.fromDate() != null) {
             query.setParameter("fromDate", criteria.fromDate());
@@ -162,6 +184,25 @@ public class JpaTrainerRepository implements TrainerRepository {
         }
 
         return query.getResultList();
+    }
+
+    @Override
+    public List<Trainer> findUnassignedTrainers(String username) {
+        return entityManager.createQuery("""
+                       SELECT t
+            FROM Trainer t
+            JOIN FETCH t.user
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM Trainee trainee
+                JOIN trainee.trainers assignedTrainer
+                WHERE trainee.user.userName = :username
+                  AND assignedTrainer = t
+            )
+            ORDER BY t.user.lastName, t.user.firstName
+            """, Trainer.class)
+                .setParameter(USERNAME, username)
+                .getResultList();
     }
 
     private StringBuilder getCriteriaQuery(TrainerTrainingCriteria criteria) {

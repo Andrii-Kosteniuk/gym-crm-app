@@ -2,12 +2,10 @@ package com.training.gym.dao;
 
 import com.training.gym.dto.trainee.TraineeTrainingCriteria;
 import com.training.gym.model.Trainee;
-import com.training.gym.model.Trainer;
 import com.training.gym.model.Training;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -15,7 +13,6 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Repository
-@RequiredArgsConstructor
 public class JpaTraineeRepository implements TraineeRepository {
 
     public static final String TRAINEE_MUST_NOT_BE_NULL = "Trainee must not be null";
@@ -23,9 +20,8 @@ public class JpaTraineeRepository implements TraineeRepository {
     public static final String USERNAME_MUST_NOT_BE_BLANK = "Trainee username must not be blank";
     public static final String USERNAME = "username";
 
-
     @PersistenceContext
-    private final EntityManager entityManager;
+    private EntityManager entityManager;
 
     @Override
     public Trainee save(Trainee trainee) {
@@ -58,7 +54,7 @@ public class JpaTraineeRepository implements TraineeRepository {
     }
 
     @Override
-    public Optional<Trainee> findByUsername(String username) {
+    public Optional<Trainee> findByUserName(String username) {
         validateUsername(username);
 
         return entityManager.createQuery("""
@@ -67,7 +63,7 @@ public class JpaTraineeRepository implements TraineeRepository {
                         WHERE u.userName = :username
                         """, Trainee.class)
                 .setParameter(USERNAME, username)
-                .getResultStream()
+                .getResultList().stream()
                 .findFirst();
     }
 
@@ -125,12 +121,36 @@ public class JpaTraineeRepository implements TraineeRepository {
     public void deleteByUsername(String username) {
         validateUsername(username);
 
-        Trainee trainee = findByUsername(username)
+        Trainee trainee = findByUserName(username)
                 .orElseThrow(() ->
                         new EntityNotFoundException("Trainee not found: " + username));
 
         delete(trainee);
     }
+
+    @Override
+    public void activateTrainee(Trainee trainee) {
+        Objects.requireNonNull(trainee, ID_MUST_NOT_BE_NULL);
+
+        Long id = trainee.getId();
+        entityManager.createQuery("""
+                        UPDATE Trainee t SET t.active = true WHERE t.id = :id
+                        """)
+                .setParameter("id", id);
+
+    }
+
+    @Override
+    public void deactivateTrainee(Trainee trainee) {
+        Objects.requireNonNull(trainee, ID_MUST_NOT_BE_NULL);
+
+        Long id = trainee.getId();
+        entityManager.createQuery("""
+                        UPDATE Trainee t SET t.active = false WHERE t.id = :id
+                        """)
+                .setParameter("id", id);
+    }
+
 
     @Override
     public List<Training> findTrainings(String username, TraineeTrainingCriteria criteria) {
@@ -206,26 +226,6 @@ public class JpaTraineeRepository implements TraineeRepository {
         }
 
         return query.getResultList();
-    }
-
-    @Override
-    public List<Trainer> findUnassignedTrainers(String username) {
-        validateUsername(username);
-
-        return entityManager.createQuery("""
-                        SELECT trainer FROM Trainer trainer
-                        WHERE NOT EXISTS (
-                            SELECT t.id
-                            FROM Trainee t
-                            JOIN t.trainers assigned
-                            WHERE t.user.userName = :username
-                            AND assigned.id = trainer.id
-                        )
-                        ORDER BY trainer.user.lastName,
-                                 trainer.user.firstName
-                        """, Trainer.class)
-                .setParameter(USERNAME, username)
-                .getResultList();
     }
 
     private void validateUsername(String username) {

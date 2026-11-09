@@ -7,7 +7,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.TypedQuery;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -16,14 +15,13 @@ import java.util.Objects;
 import java.util.Optional;
 
 @Repository
-@RequiredArgsConstructor
 public class JpaTrainingRepository implements TrainingRepository {
 
     public static final String TRAINING_MUST_NOT_BE_NULL = "Training must not be null";
     public static final String ID_MUST_NOT_BE_NULL = "Training ID must not be null";
 
     @PersistenceContext
-    private final EntityManager entityManager;
+    private EntityManager entityManager;
 
     @Override
     public Training save(Training training) {
