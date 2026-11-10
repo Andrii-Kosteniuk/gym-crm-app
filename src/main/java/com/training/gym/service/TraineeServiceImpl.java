@@ -43,14 +43,16 @@ public class TraineeServiceImpl implements TraineeService {
     private final ProfileAuthorizationService authorizationService;
     private final CredentialService credentialService;
 
-    public TraineeServiceImpl(TraineeRepository traineeRepository, TrainerRepository trainerRepository,
+    public TraineeServiceImpl(TraineeRepository traineeRepository,
+                              TrainerRepository trainerRepository,
                               UserRepository userRepository,
                               TraineeMapper traineeMapper,
                               UsernameGenerator usernameGenerator,
                               PasswordGenerator passwordGenerator,
                               TraineeDtoValidator traineeValidator,
                               PasswordEncoder passwordEncoder,
-                              ProfileAuthorizationService authorizationService, CredentialService credentialService) {
+                              ProfileAuthorizationService authorizationService,
+                              CredentialService credentialService) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
         this.userRepository = userRepository;
@@ -118,6 +120,7 @@ public class TraineeServiceImpl implements TraineeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Trainee getTraineeById(Credentials credentials, Long id) {
         log.debug("Retrieving trainee profile: id={}", id);
 
@@ -190,6 +193,7 @@ public class TraineeServiceImpl implements TraineeService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Training> findTrainings(Credentials credentials, String username, TraineeTrainingCriteria criteria) {
 
         authorizationService.requireTrainee(credentials);

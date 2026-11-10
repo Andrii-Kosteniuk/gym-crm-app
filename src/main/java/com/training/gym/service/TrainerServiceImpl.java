@@ -117,6 +117,7 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Trainer getTrainerById(Credentials credentials, Long id) {
         log.debug("Retrieving trainer profile: id={}", id);
         authorizationService.requireTrainer(credentials);
@@ -126,6 +127,7 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Trainer findByUsername(Credentials credentials, String username) {
 
         authorizationService.requireTrainer(credentials);
