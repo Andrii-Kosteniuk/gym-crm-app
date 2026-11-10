@@ -1,9 +1,10 @@
 package com.training.gym.service;
 
-import com.training.gym.dao.TraineeRepository;
 import com.training.gym.dao.TrainerRepository;
+import com.training.gym.dao.TrainingRepository;
 import com.training.gym.dao.TrainingTypeRepository;
 import com.training.gym.dao.UserRepository;
+import com.training.gym.dto.auth.ChangePasswordDto;
 import com.training.gym.dto.auth.Credentials;
 import com.training.gym.dto.trainer.CreateTrainerDto;
 import com.training.gym.dto.trainer.TrainerTrainingCriteria;
@@ -28,8 +29,9 @@ import java.util.Objects;
 public class TrainerServiceImpl implements TrainerService {
 
     private final TrainerRepository trainerRepository;
-    private final TraineeRepository traineeRepository;
     private final ProfileAuthorizationService authorizationService;
+    private final TrainingRepository trainingRepository;
+    private final CredentialService credentialService;
     private final TrainerMapper trainerMapper;
     private final UsernameGenerator usernameGenerator;
     private final PasswordGenerator passwordGenerator;
@@ -41,8 +43,9 @@ public class TrainerServiceImpl implements TrainerService {
 
     public TrainerServiceImpl(
             TrainerRepository trainerRepository,
-            TraineeRepository traineeRepository,
             ProfileAuthorizationService authorizationService,
+            TrainingRepository trainingRepository,
+            CredentialService credentialService,
             TrainerMapper trainerMapper,
             UsernameGenerator usernameGenerator,
             PasswordGenerator passwordGenerator,
@@ -52,8 +55,9 @@ public class TrainerServiceImpl implements TrainerService {
             TrainingTypeRepository trainingTypeRepository
     ) {
         this.trainerRepository = trainerRepository;
-        this.traineeRepository = traineeRepository;
         this.authorizationService = authorizationService;
+        this.trainingRepository = trainingRepository;
+        this.credentialService = credentialService;
         this.trainerMapper = trainerMapper;
         this.usernameGenerator = usernameGenerator;
         this.passwordGenerator = passwordGenerator;
@@ -100,24 +104,16 @@ public class TrainerServiceImpl implements TrainerService {
 
     @Override
     @Transactional
-    public Trainer updateTrainer(Credentials credentials, UpdateTrainerDto trainerDto) {
-        trainerDtoValidator.validateUpdate(trainerDto);
+    public Trainer updateTrainer(Credentials credentials, UpdateTrainerDto dto) {
+        trainerDtoValidator.validateUpdate(dto);
+        log.debug("Updating trainer profile: username={}", dto.userName());
+        Trainer trainer = authorizationService.requireTrainerOwner(credentials, dto.userName());
 
-        String username = trainerDto.userName();
+        trainerMapper.updateTrainer(dto, trainer);
 
-        log.debug("Updating trainer profile: username={}", username);
+        log.info("Trainer profile updated successfully: username={}", dto.userName());
 
-        Trainer trainer = authorizationService.requireTrainerOwner(
-                credentials,
-                trainerDto.userName()
-        );
-
-        trainerMapper.updateTrainer(trainerDto, trainer);
-
-        Trainer updatedTrainer = trainerRepository.save(trainer);
-
-        log.info("Trainer profile updated successfully: username={}", username);
-        return updatedTrainer;
+        return trainer;
     }
 
     @Override
@@ -130,7 +126,7 @@ public class TrainerServiceImpl implements TrainerService {
     }
 
     @Override
-    public Trainer findByUserName(Credentials credentials, String username) {
+    public Trainer findByUsername(Credentials credentials, String username) {
 
         authorizationService.requireTrainer(credentials);
 
@@ -153,49 +149,69 @@ public class TrainerServiceImpl implements TrainerService {
 
     }
 
-    @Override
+
     @Transactional
-    public void activateTrainer(Trainer trainer, Credentials credentials) {
+    public void activateTrainer(Credentials credentials, Trainer trainer) {
         Objects.requireNonNull(trainer, "Trainer is required");
 
         authorizationService.requireTrainer(credentials);
 
-        Trainer managed = trainerRepository.findById(trainer.getId())
+        Trainer managedTrainer = trainerRepository.findById(trainer.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found: " + trainer.getId()));
 
-        managed.getUser().activate();
+        if (Boolean.TRUE == managedTrainer.getUser().getActive())
+            throw new IllegalStateException("Trainer is already active.");
+
+        trainerRepository.activateTrainer(managedTrainer);
+        log.info("Trainer profile has been activated");
     }
 
     @Override
     @Transactional
     public void deactivateTrainer(Credentials credentials, Trainer trainer) {
         Objects.requireNonNull(trainer, "Trainer is required");
+
         authorizationService.requireTrainer(credentials);
 
-        Trainer managed = trainerRepository.findById(trainer.getId())
+        Trainer managedTrainer = trainerRepository.findById(trainer.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Trainer not found: " + trainer.getId()));
 
-        managed.getUser().deactivate();
+        if (Boolean.FALSE == managedTrainer.getUser().getActive())
+            throw new IllegalStateException("Trainer is already deactivated.");
+
+        trainerRepository.deactivateTrainer(managedTrainer);
+        log.info("Trainer profile has been deactivated");
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Training> findTrainings(Credentials credentials, String username, TrainerTrainingCriteria criteria) {
+        Objects.requireNonNull(criteria, "Criteria must not be null");
+        log.debug("Finding training by specified criteria");
+        if (username == null || username.isBlank()) {
+            throw new IllegalArgumentException("Trainer username must not be blank");
+        }
 
-        authorizationService.requireTrainee(credentials);
-        return trainerRepository.findTrainings(username, criteria);
+        authorizationService.requireTrainerOwner(credentials, username);
+
+        return trainingRepository.findByTrainerUsername(username, criteria);
     }
 
     @Override
     @Transactional(readOnly = true)
     public List<Trainer> getUnassignedTrainers(Credentials credentials, String username) {
+        Objects.requireNonNull(username, "Trainee username must not be null");
 
+        authorizationService.requireTraineeOwner(credentials, username);
+
+        return trainerRepository.findUnassignedTrainers(username);
+    }
+
+
+    @Override
+    @Transactional
+    public void changePassword(Credentials credentials, ChangePasswordDto dto) {
         authorizationService.requireTrainer(credentials);
-
-        Trainee trainee = traineeRepository.findByUserName(username)
-                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + username));
-
-        return trainerRepository.findUnassignedTrainers(
-                trainee.getUser().getUserName()
-        );
+        credentialService.changePassword(credentials, dto);
     }
 }

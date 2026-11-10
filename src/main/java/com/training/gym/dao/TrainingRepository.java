@@ -8,9 +8,9 @@ import java.util.List;
 
 public interface TrainingRepository extends CrudRepository<Training, Long> {
 
-    List<Training> findByTraineeUsername(String username,TraineeTrainingCriteria criteria);
+    List<Training> findByTraineeUsername(String username, TraineeTrainingCriteria criteria);
 
-    List<Training> findByTrainerUsername(String username,TrainerTrainingCriteria criteria
+    List<Training> findByTrainerUsername(String username, TrainerTrainingCriteria criteria
     );
 }
 

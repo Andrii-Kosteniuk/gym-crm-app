@@ -12,7 +12,7 @@ import java.util.Set;
 @Entity
 @Table(name = "trainers")
 @Getter @Setter
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Trainer {

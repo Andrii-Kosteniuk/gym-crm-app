@@ -1,5 +1,6 @@
 package com.training.gym.service;
 
+import com.training.gym.dto.auth.ChangePasswordDto;
 import com.training.gym.dto.auth.Credentials;
 import com.training.gym.dto.trainer.TrainerTrainingCriteria;
 import com.training.gym.model.Trainer;
@@ -14,10 +15,11 @@ public interface TrainerService {
     Trainer createTrainer(CreateTrainerDto dto);
     Trainer updateTrainer(Credentials credentials, UpdateTrainerDto dto);
     Trainer getTrainerById(Credentials credentials, Long id);
-    Trainer findByUserName(Credentials credentials, String username);
+    Trainer findByUsername(Credentials credentials, String username);
     void removeTrainerByUsername(Credentials credentials, String username);
-    void activateTrainer(Trainer trainer, Credentials credentials);
+    void activateTrainer(Credentials credentials, Trainer trainer);
     void deactivateTrainer(Credentials credentials, Trainer trainer);
     List<Training> findTrainings(Credentials credentials, String username, TrainerTrainingCriteria criteria);
     List<Trainer> getUnassignedTrainers(Credentials credentials, String username);
+    void changePassword(Credentials credentials, ChangePasswordDto dto);
 }

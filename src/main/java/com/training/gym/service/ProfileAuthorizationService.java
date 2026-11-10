@@ -11,8 +11,7 @@ import com.training.gym.model.User;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-@
-        Service
+@Service
 @RequiredArgsConstructor
 public class ProfileAuthorizationService {
 
@@ -34,7 +33,7 @@ public class ProfileAuthorizationService {
                 .orElseThrow(AuthenticationFailedException::new);
     }
 
-    public Trainee requireTraineeOwner(Credentials credentials,String targetUsername) {
+    public Trainee requireTraineeOwner(Credentials credentials, String targetUsername) {
         Trainee trainee = requireTrainee(credentials);
 
         if (!trainee.getUser().getUserName().equals(targetUsername)) {
@@ -44,7 +43,7 @@ public class ProfileAuthorizationService {
         return trainee;
     }
 
-    public Trainer requireTrainerOwner(Credentials credentials,String targetUsername) {
+    public Trainer requireTrainerOwner(Credentials credentials, String targetUsername) {
         Trainer trainer = requireTrainer(credentials);
 
         if (!trainer.getUser().getUserName().equals(targetUsername)) {

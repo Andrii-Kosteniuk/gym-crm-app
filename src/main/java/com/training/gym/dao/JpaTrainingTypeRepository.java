@@ -2,6 +2,7 @@ package com.training.gym.dao;
 
 import com.training.gym.model.TrainingType;
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Optional;
 public class JpaTrainingTypeRepository implements TrainingTypeRepository {
     private static final String NOT_NULL_ID_MESSAGE = "TrainingType ID must not be null";
 
+    @PersistenceContext
     private EntityManager entityManager;
 
     @Override

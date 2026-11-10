@@ -6,7 +6,7 @@ import com.training.gym.dto.training.CreateTrainingDto;
 
 public interface TrainingService {
     Training createTraining(Credentials credentials, CreateTrainingDto trainingDto);
-    Training getTrainingById(Long id);
+    Training getTrainingById(Credentials credentials, Long id);
 }
 
 

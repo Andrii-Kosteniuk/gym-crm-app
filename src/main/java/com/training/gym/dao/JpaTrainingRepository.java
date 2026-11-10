@@ -45,10 +45,10 @@ public class JpaTrainingRepository implements TrainingRepository {
     @Override
     public List<Training> findAll() {
         return entityManager.createQuery("""
-                SELECT t
-                FROM Training t
-                ORDER BY t.trainingDate DESC, t.id DESC
-                """, Training.class)
+                        SELECT t
+                        FROM Training t
+                        ORDER BY t.trainingDate DESC, t.id DESC
+                        """, Training.class)
                 .getResultList();
     }
 
@@ -57,10 +57,10 @@ public class JpaTrainingRepository implements TrainingRepository {
         Objects.requireNonNull(id, ID_MUST_NOT_BE_NULL);
 
         Long count = entityManager.createQuery("""
-                SELECT COUNT(t)
-                FROM Training t
-                WHERE t.id = :id
-                """, Long.class)
+                        SELECT COUNT(t)
+                        FROM Training t
+                        WHERE t.id = :id
+                        """, Long.class)
                 .setParameter("id", id)
                 .getSingleResult();
 
@@ -121,10 +121,7 @@ public class JpaTrainingRepository implements TrainingRepository {
     }
 
     @Override
-    public List<Training> findByTrainerUsername(
-            String username,
-            TrainerTrainingCriteria criteria
-    ) {
+    public List<Training> findByTrainerUsername(String username,TrainerTrainingCriteria criteria) {
         validateUsername(username);
         Objects.requireNonNull(criteria, "Criteria must not be null");
 
@@ -175,20 +172,18 @@ public class JpaTrainingRepository implements TrainingRepository {
         }
 
         if (hasText(criteria.traineeName())) {
-            jpql.append("""
-                    AND CONCAT(
-                        CONCAT(traineeUser.firstName, ' '),
-                        traineeUser.lastName
-                    ) = :traineeName
-                    """);
+            jpql.append(
+                    " AND CONCAT(traineeUser.firstName, ' ', traineeUser.lastName) = :traineeName"
+            );
         }
 
         jpql.append(" ORDER BY t.trainingDate DESC, t.id DESC");
+
         return jpql;
     }
 
     private StringBuilder getCriteriaBuilder(TraineeTrainingCriteria criteria) {
-        StringBuilder criteriaQuery = new StringBuilder("""
+        StringBuilder jpql = new StringBuilder("""
                 SELECT t
                 FROM Training t
                 JOIN t.trainee trainee
@@ -200,28 +195,26 @@ public class JpaTrainingRepository implements TrainingRepository {
                 """);
 
         if (criteria.fromDate() != null) {
-            criteriaQuery.append(" AND t.trainingDate >= :fromDate");
+            jpql.append(" AND t.trainingDate >= :fromDate");
         }
 
         if (criteria.toDate() != null) {
-            criteriaQuery.append(" AND t.trainingDate <= :toDate");
+            jpql.append(" AND t.trainingDate <= :toDate");
         }
 
         if (hasText(criteria.trainerName())) {
-            criteriaQuery.append("""
-                    AND CONCAT(
-                        CONCAT(trainerUser.firstName, ' '),
-                        trainerUser.lastName
-                    ) = :trainerName
-                    """);
+            jpql.append(
+                    " AND CONCAT(trainerUser.firstName, ' ', trainerUser.lastName) = :trainerName"
+            );
         }
 
         if (hasText(criteria.trainingType())) {
-            criteriaQuery.append(" AND type.name = :trainingType");
+            jpql.append(" AND type.name = :trainingType");
         }
 
-        criteriaQuery.append(" ORDER BY t.trainingDate DESC, t.id DESC");
-        return criteriaQuery;
+        jpql.append(" ORDER BY t.trainingDate DESC, t.id DESC");
+
+        return jpql;
     }
 
     private void validateUsername(String username) {

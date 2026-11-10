@@ -130,25 +130,14 @@ public class JpaTraineeRepository implements TraineeRepository {
 
     @Override
     public void activateTrainee(Trainee trainee) {
-        Objects.requireNonNull(trainee, ID_MUST_NOT_BE_NULL);
-
-        Long id = trainee.getId();
-        entityManager.createQuery("""
-                        UPDATE Trainee t SET t.active = true WHERE t.id = :id
-                        """)
-                .setParameter("id", id);
-
+        Objects.requireNonNull(trainee, TRAINEE_MUST_NOT_BE_NULL);
+        changeActive(trainee.getId(), true);
     }
 
     @Override
     public void deactivateTrainee(Trainee trainee) {
-        Objects.requireNonNull(trainee, ID_MUST_NOT_BE_NULL);
-
-        Long id = trainee.getId();
-        entityManager.createQuery("""
-                        UPDATE Trainee t SET t.active = false WHERE t.id = :id
-                        """)
-                .setParameter("id", id);
+        Objects.requireNonNull(trainee, TRAINEE_MUST_NOT_BE_NULL);
+        changeActive(trainee.getId(), false);
     }
 
 
@@ -184,7 +173,6 @@ public class JpaTraineeRepository implements TraineeRepository {
         boolean notNullAndNotBlankName = criteria.trainerName() != null
                 && !criteria.trainerName().isBlank();
 
-
         if (notNullAndNotBlankName) {
             criteriaQuery.append("""
                      AND CONCAT(
@@ -218,11 +206,11 @@ public class JpaTraineeRepository implements TraineeRepository {
         }
 
         if (notNullAndNotBlankName) {
-            query.setParameter("trainerName", criteria.trainerName());
+            query.setParameter("trainerName", criteria.trainerName().trim());
         }
 
         if (notNullAndNotBlankType) {
-            query.setParameter("trainingType", criteria.trainingType());
+            query.setParameter("trainingType", criteria.trainingType().trim());
         }
 
         return query.getResultList();
@@ -233,4 +221,21 @@ public class JpaTraineeRepository implements TraineeRepository {
             throw new IllegalArgumentException(USERNAME_MUST_NOT_BE_BLANK);
         }
     }
+
+    private void changeActive(Long id, boolean active) {
+        Objects.requireNonNull(id, ID_MUST_NOT_BE_NULL);
+
+        int updated = entityManager.createQuery("""
+                        UPDATE User u SET u.active = :active
+                        WHERE u.id = (SELECT t.user.id FROM Trainee t WHERE t.id = :id)
+                        """)
+                .setParameter("active", active)
+                .setParameter("id", id)
+                .executeUpdate();
+
+        if (updated == 0) {
+            throw new EntityNotFoundException("Trainer not found: " + id);
+        }
+    }
+
 }

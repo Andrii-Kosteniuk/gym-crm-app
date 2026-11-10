@@ -38,24 +38,7 @@ public class User {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Builder.Default
     @Column(name = "active", nullable = false)
-    private boolean active = true;
-
-    public void activate() {
-        if (active) {
-            throw new IllegalStateException("Profile is already active");
-        }
-
-        active = true;
-    }
-
-    public void deactivate() {
-        if (!active) {
-            throw new IllegalStateException("Profile is already inactive");
-        }
-
-        active = false;
-    }
+    private Boolean active;
 
 }

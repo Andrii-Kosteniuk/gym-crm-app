@@ -75,7 +75,7 @@ public class JpaTrainerRepository implements TrainerRepository {
                         SELECT t
                         FROM Trainer t
                         JOIN FETCH t.user u
-                        WHERE u.username = :username
+                        WHERE u.userName = :username
                         """, Trainer.class)
                 .setParameter(USERNAME, username)
                 .getResultList()
@@ -109,24 +109,14 @@ public class JpaTrainerRepository implements TrainerRepository {
 
     @Override
     public void activateTrainer(Trainer trainer) {
-        Objects.requireNonNull(trainer, NOT_NULL_ID_MESSAGE);
-
-        Long id = trainer.getId();
-        entityManager.createQuery("""
-                        UPDATE Trainer t SET t.active = true WHERE t.id = :id
-                        """)
-                .setParameter("id", id);
+        Objects.requireNonNull(trainer, TRAINER_MUST_NOT_BE_NULL);
+        changeActive(trainer.getId(), true);
     }
 
     @Override
     public void deactivateTrainer(Trainer trainer) {
-        Objects.requireNonNull(trainer, NOT_NULL_ID_MESSAGE);
-
-        Long id = trainer.getId();
-        entityManager.createQuery("""
-                        UPDATE Trainer t SET t.active = false WHERE t.id = :id
-                        """)
-                .setParameter("id", id);
+        Objects.requireNonNull(trainer, TRAINER_MUST_NOT_BE_NULL);
+        changeActive(trainer.getId(), false);
     }
 
     @Override
@@ -189,18 +179,18 @@ public class JpaTrainerRepository implements TrainerRepository {
     @Override
     public List<Trainer> findUnassignedTrainers(String username) {
         return entityManager.createQuery("""
-                       SELECT t
-            FROM Trainer t
-            JOIN FETCH t.user
-            WHERE NOT EXISTS (
-                SELECT 1
-                FROM Trainee trainee
-                JOIN trainee.trainers assignedTrainer
-                WHERE trainee.user.userName = :username
-                  AND assignedTrainer = t
-            )
-            ORDER BY t.user.lastName, t.user.firstName
-            """, Trainer.class)
+                                   SELECT t
+                        FROM Trainer t
+                        JOIN FETCH t.user
+                        WHERE NOT EXISTS (
+                            SELECT 1
+                            FROM Trainee trainee
+                            JOIN trainee.trainers assignedTrainer
+                            WHERE trainee.user.userName = :username
+                              AND assignedTrainer = t
+                        )
+                        ORDER BY t.user.lastName, t.user.firstName
+                        """, Trainer.class)
                 .setParameter(USERNAME, username)
                 .getResultList();
     }
@@ -261,4 +251,18 @@ public class JpaTrainerRepository implements TrainerRepository {
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
     }
+
+    private void changeActive(Long id, boolean active) {
+        Objects.requireNonNull(id, NOT_NULL_ID_MESSAGE);
+
+        entityManager.createQuery("""
+                        UPDATE User u SET u.active = :active
+                        WHERE u.id = (SELECT t.user.id FROM Trainer t WHERE t.id = :id)
+                        """)
+                .setParameter("active", active)
+                .setParameter("id", id)
+                .executeUpdate();
+
+    }
+
 }

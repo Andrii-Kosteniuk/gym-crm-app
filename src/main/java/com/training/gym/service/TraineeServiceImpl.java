@@ -159,10 +159,15 @@ public class TraineeServiceImpl implements TraineeService {
 
         authorizationService.requireTrainee(credentials);
 
-        Trainee managed = traineeRepository.findById(trainee.getId())
+        Trainee managedTrainee = traineeRepository.findById(trainee.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + trainee.getId()));
 
-        managed.getUser().activate();
+        if (Boolean.TRUE == managedTrainee.getUser().getActive())
+            throw new IllegalStateException("Trainee is already activated.");
+
+        traineeRepository.activateTrainee(managedTrainee);
+
+        log.info("Trainee profile has been activated");
     }
 
     @Override
@@ -172,10 +177,16 @@ public class TraineeServiceImpl implements TraineeService {
 
         authorizationService.requireTrainee(credentials);
 
-        Trainee managed = traineeRepository.findById(trainee.getId())
+        Trainee managedTrainee = traineeRepository.findById(trainee.getId())
                 .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + trainee.getId()));
 
-        managed.getUser().deactivate();
+
+        if (Boolean.FALSE == managedTrainee.getUser().getActive())
+            throw new IllegalStateException("Trainee is already deactivated.");
+
+        traineeRepository.deactivateTrainee(managedTrainee);
+
+        log.info("Trainee profile has been deactivated");
     }
 
     @Override

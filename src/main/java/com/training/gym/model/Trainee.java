@@ -16,7 +16,7 @@ import java.util.Set;
 @Table(name = "trainees")
 @Getter
 @Setter
-@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class Trainee {
