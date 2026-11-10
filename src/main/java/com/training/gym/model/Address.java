@@ -1,31 +1,34 @@
 package com.training.gym.model;
 
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Positive;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-@NoArgsConstructor
+@Embeddable
+@Getter
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-@Getter
-@Setter
 public class Address {
 
+    @NotBlank
+    @Column(name = "city", length = 100)
     private String city;
-    private String street;
-    private int buildNumber;
-    private String zipcode;
 
-    @Override
-    public String toString() {
-        return """
-                city: '%s'
-                street: '%s',
-                number: '%d',
-                zipCode: '%s',
-                """.trim().formatted(
-                city,
-                street,
-                buildNumber,
-                zipcode
-        );
-    }
+    @NotBlank
+    @Column(name = "street", length = 150)
+    private String street;
+
+    @Positive
+    @Column(name = "building_number")
+    private Integer buildingNumber;
+
+    @NotBlank
+    @Column(name = "zipcode", length = 20)
+    private String zipCode;
 }

@@ -1,6 +1,5 @@
 package com.training.gym.validation;
 
-import java.time.Duration;
 import java.time.LocalDate;
 
 public final class ValidationUtils {
@@ -30,10 +29,10 @@ public final class ValidationUtils {
         }
     }
 
-    public static void requirePositiveDuration(Duration duration) {
+    public static void requirePositiveDuration(Long duration) {
         requireNotNull(duration, "Training duration");
 
-        if (duration.isZero() || duration.isNegative()) {
+        if (duration == 0 || duration < 0) {
             throw new IllegalArgumentException("Training duration must be positive");
         }
     }

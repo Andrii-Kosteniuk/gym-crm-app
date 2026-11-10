@@ -3,6 +3,8 @@ package com.training.gym.mapper;
 import com.training.gym.model.Trainer;
 import com.training.gym.dto.trainer.CreateTrainerDto;
 import com.training.gym.dto.trainer.UpdateTrainerDto;
+import com.training.gym.model.TrainingType;
+import com.training.gym.model.User;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -11,14 +13,11 @@ import org.mapstruct.MappingTarget;
 public interface TrainerMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "userName", ignore = true)
-    @Mapping(target = "password", ignore = true)
-    @Mapping(target = "active", ignore = true)
-    Trainer toTrainer(CreateTrainerDto dto);
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "specialization", source = "specialization")
+    @Mapping(target = "trainees", ignore = true)
+    @Mapping(target = "trainings", ignore = true)
+    Trainer toTrainer( CreateTrainerDto dto,User user,TrainingType specialization);
 
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "userName", ignore = true)
-    @Mapping(target = "password", ignore = true)
-    @Mapping(target = "active", ignore = true)
     void updateTrainer(UpdateTrainerDto dto, @MappingTarget Trainer trainer);
 }

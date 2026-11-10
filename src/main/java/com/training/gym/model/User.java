@@ -1,36 +1,44 @@
 package com.training.gym.model;
 
+import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.*;
 
-@AllArgsConstructor
-@NoArgsConstructor
-@EqualsAndHashCode
+@Entity
+@Table(name = "users")
 @Getter
 @Setter
-public abstract class User {
+@NoArgsConstructor(access = lombok.AccessLevel.PROTECTED)
+@AllArgsConstructor
+@Builder
+public class User {
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "first_name", nullable = false, length = 100)
     private String firstName;
+
+    @NotBlank
+    @Size(max = 100)
+    @Column(name = "last_name", nullable = false, length = 100)
     private String lastName;
+
+    @NotBlank
+    @Size(max = 150)
+    @Column(name = "username", nullable = false,
+            unique = true, length = 150)
     private String userName;
+
+    @NotBlank
+    @Column(name = "password", nullable = false)
     private String password;
-    private boolean active;
 
+    @Column(name = "active", nullable = false)
+    private Boolean active;
 
-    @Override
-    public String toString() {
-        return """
-                id: '%d'
-                firstName: '%s',
-                lastName: '%s',
-                username: '%s',
-                active: %s
-                """.formatted(
-                id,
-                firstName,
-                lastName,
-                userName,
-                active
-        );
-    }
 }

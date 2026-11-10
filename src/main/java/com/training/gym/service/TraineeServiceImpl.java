@@ -1,23 +1,32 @@
 package com.training.gym.service;
 
-import com.training.gym.util.IdGenerator;
-import com.training.gym.util.PasswordGenerator;
-import com.training.gym.util.UsernameGenerator;
-import com.training.gym.exception.EntityNotFoundException;
-import com.training.gym.exception.ResourceConflictException;
-import com.training.gym.model.Trainee;
-import com.training.gym.dto.trainee.CreateTraineeDto;
-import com.training.gym.dto.trainee.UpdateTraineeDto;
-import com.training.gym.mapper.TraineeMapper;
 import com.training.gym.dao.TraineeRepository;
 import com.training.gym.dao.TrainerRepository;
-import com.training.gym.dao.TrainingRepository;
+import com.training.gym.dao.UserRepository;
+import com.training.gym.dto.auth.ChangePasswordDto;
+import com.training.gym.dto.auth.Credentials;
+import com.training.gym.dto.trainee.CreateTraineeDto;
+import com.training.gym.dto.trainee.TraineeTrainingCriteria;
+import com.training.gym.dto.trainee.UpdateTraineeDto;
+import com.training.gym.dto.trainee.UpdateTraineeTrainersDto;
+import com.training.gym.exception.EntityNotFoundException;
+import com.training.gym.mapper.TraineeMapper;
+import com.training.gym.model.Trainee;
+import com.training.gym.model.Trainer;
+import com.training.gym.model.Training;
+import com.training.gym.model.User;
+import com.training.gym.util.PasswordGenerator;
+import com.training.gym.util.UsernameGenerator;
 import com.training.gym.validation.TraineeDtoValidator;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
+import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -25,115 +34,220 @@ public class TraineeServiceImpl implements TraineeService {
 
     private final TraineeRepository traineeRepository;
     private final TrainerRepository trainerRepository;
-    private final TrainingRepository trainingRepository;
+    private final UserRepository userRepository;
     private final TraineeMapper traineeMapper;
-    private final IdGenerator idGenerator;
     private final UsernameGenerator usernameGenerator;
     private final PasswordGenerator passwordGenerator;
     private final TraineeDtoValidator traineeValidator;
+    private final PasswordEncoder passwordEncoder;
+    private final ProfileAuthorizationService authorizationService;
+    private final CredentialService credentialService;
 
     public TraineeServiceImpl(TraineeRepository traineeRepository,
-                              TrainerRepository trainerRepository, TrainingRepository trainingRepository,
+                              TrainerRepository trainerRepository,
+                              UserRepository userRepository,
                               TraineeMapper traineeMapper,
-                              @Qualifier("traineeIdGenerator") IdGenerator idGenerator,
                               UsernameGenerator usernameGenerator,
-                              PasswordGenerator passwordGenerator, TraineeDtoValidator traineeValidator) {
+                              PasswordGenerator passwordGenerator,
+                              TraineeDtoValidator traineeValidator,
+                              PasswordEncoder passwordEncoder,
+                              ProfileAuthorizationService authorizationService,
+                              CredentialService credentialService) {
         this.traineeRepository = traineeRepository;
         this.trainerRepository = trainerRepository;
-        this.trainingRepository = trainingRepository;
+        this.userRepository = userRepository;
         this.traineeMapper = traineeMapper;
-        this.idGenerator = idGenerator;
         this.usernameGenerator = usernameGenerator;
         this.passwordGenerator = passwordGenerator;
         this.traineeValidator = traineeValidator;
+        this.passwordEncoder = passwordEncoder;
+        this.authorizationService = authorizationService;
+        this.credentialService = credentialService;
     }
 
     @Override
+    @Transactional
     public Trainee createTrainee(CreateTraineeDto traineeDto) {
         log.debug("Creating trainee profile");
 
         traineeValidator.validateCreate(traineeDto);
+        String username = usernameGenerator.generate(traineeDto.firstName(), traineeDto.lastName(), userRepository::existsByUsername);
+        String password = passwordGenerator.generate();
 
-        Trainee trainee = traineeMapper.toTrainee(traineeDto);
+        User user = User.builder()
+                .firstName(traineeDto.firstName())
+                .lastName(traineeDto.lastName())
+                .userName(username)
+                .password(passwordEncoder.encode(password))
+                .active(true)
+                .build();
 
-        trainee.setId(idGenerator.generate());
-        trainee.setPassword(passwordGenerator.generate());
-
-        String uniqUserName = usernameGenerator.generate(traineeDto.firstName(), traineeDto.lastName(), this::usernameExists);
-        trainee.setUserName(uniqUserName);
-        trainee.setActive(true);
+        Trainee trainee = traineeMapper.toTrainee(traineeDto, user);
 
         Trainee savedTrainee = traineeRepository.save(trainee);
 
-        log.info("Trainee profile created successfully: username={}", uniqUserName);
+        log.info("Trainee profile created successfully: username={}", username);
         return savedTrainee;
 
     }
 
     @Override
-    public Trainee updateTrainee(UpdateTraineeDto traineeDto) {
+    @Transactional
+    public Trainee updateTrainee(Credentials credentials, UpdateTraineeDto traineeDto) {
 
         traineeValidator.validateUpdate(traineeDto);
 
-        String username = traineeDto.userName();
+        String userName = traineeDto.userName();
 
-        log.debug("Updating trainee profile: username={}", username);
+        log.debug("Updating trainee profile: username={}", userName);
 
-        Trainee existing = traineeRepository
-                .findByUserName(traineeDto.userName())
-                .orElseThrow(() -> {
-                    log.warn("Trainee update failed: username={} not found", username);
-                    return new EntityNotFoundException("Trainee with username %s not found".formatted(traineeDto.userName()));
-                });
+        Trainee trainee = authorizationService.requireTraineeOwner(
+                credentials,
+                traineeDto.userName()
+        );
 
-        traineeMapper.updateTrainee(traineeDto, existing);
+        User user = trainee.getUser();
 
-        Trainee updatedTrainee = traineeRepository.save(existing);
+        user.setFirstName(traineeDto.firstName());
+        user.setLastName(traineeDto.lastName());
 
-        log.info("Trainee profile updated successfully: username={}", username);
-        return updatedTrainee;
+        trainee.updateProfile(traineeDto.dateOfBirth(), traineeDto.address());
+
+        log.info("Trainee updated: username={}", userName);
+
+        return trainee;
+
     }
 
     @Override
-    public Trainee getTraineeById(Long id) {
+    @Transactional(readOnly = true)
+    public Trainee getTraineeById(Credentials credentials, Long id) {
         log.debug("Retrieving trainee profile: id={}", id);
+
+        authorizationService.requireTrainee(credentials);
         return traineeRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Trainee with id %d not found".formatted(id)));
     }
 
     @Override
-    public void removeTrainee(Long id) {
-        Objects.requireNonNull(id, "Trainee ID must not be null");
+    @Transactional(readOnly = true)
+    public Trainee findByUserName(Credentials credentials, String username) {
 
-        log.debug("Deleting trainee profile: id={}", id);
+        authorizationService.requireTrainee(credentials);
 
-        if (!traineeRepository.existsById(id)) {
-            log.error("Failed to find trainee by id {}", id);
-
-            throw new EntityNotFoundException(
-                    "Trainee with id %d not found".formatted(id)
-            );
-        }
-
-        if (trainingRepository.existsByTraineeId(id)) {
-            log.warn(
-                    "Trainee deletion rejected because related trainings exist: id={}",
-                    id
-            );
-
-            throw new ResourceConflictException(
-                    "Cannot delete trainee with id %d because related trainings exist"
-                            .formatted(id)
-            );
-        }
-
-        traineeRepository.deleteById(id);
-        log.info("Trainee profile deleted successfully: id={}", id);
+        return traineeRepository.findByUserName(username)
+                .orElseThrow(() -> new EntityNotFoundException("Trainee with name %s not found".formatted(username)));
     }
 
-    private boolean usernameExists(String username) {
-        return traineeRepository.existsByUserName(username)
-                || trainerRepository.existsByUserName(username);
+
+    @Override
+    @Transactional
+    public void removeTraineeByUsername(Credentials credentials, String username) {
+        log.debug("Removing trainee profile");
+
+        Trainee trainee = authorizationService.requireTraineeOwner(credentials, username);
+
+        for (Trainer trainer : new HashSet<>(trainee.getTrainers())) {
+            trainee.removeTrainer(trainer);
+        }
+        traineeRepository.delete(trainee);
+        log.info("Trainee profile removed successfully: username={}", username);
+    }
+
+
+    @Override
+    @Transactional
+    public void activateTrainee(Credentials credentials, Trainee trainee) {
+        Objects.requireNonNull(trainee, "Trainee is required");
+
+        authorizationService.requireTrainee(credentials);
+
+        Trainee managedTrainee = traineeRepository.findById(trainee.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + trainee.getId()));
+
+        if (Boolean.TRUE == managedTrainee.getUser().getActive())
+            throw new IllegalStateException("Trainee is already activated.");
+
+        traineeRepository.activateTrainee(managedTrainee);
+
+        log.info("Trainee profile has been activated");
+    }
+
+    @Override
+    @Transactional
+    public void deactivateTrainee(Credentials credentials, Trainee trainee) {
+        Objects.requireNonNull(trainee, "Trainee is required");
+
+        authorizationService.requireTrainee(credentials);
+
+        Trainee managedTrainee = traineeRepository.findById(trainee.getId())
+                .orElseThrow(() -> new EntityNotFoundException("Trainee not found: " + trainee.getId()));
+
+
+        if (Boolean.FALSE == managedTrainee.getUser().getActive())
+            throw new IllegalStateException("Trainee is already deactivated.");
+
+        traineeRepository.deactivateTrainee(managedTrainee);
+
+        log.info("Trainee profile has been deactivated");
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Training> findTrainings(Credentials credentials, String username, TraineeTrainingCriteria criteria) {
+
+        authorizationService.requireTrainee(credentials);
+        return traineeRepository.findTrainings(username, criteria);
+    }
+
+    @Override
+    @Transactional
+    public void changePassword(Credentials credentials, ChangePasswordDto dto) {
+        authorizationService.requireTrainee(credentials);
+        credentialService.changePassword(credentials, dto);
+    }
+
+    @Override
+    @Transactional
+    public Set<Trainer> replaceTrainers(Credentials credentials, UpdateTraineeTrainersDto dto) {
+        Objects.requireNonNull(dto, "Update DTO is required");
+
+        if (dto.traineeUsername() == null
+                || dto.traineeUsername().isBlank()
+                || dto.trainerIds() == null
+                || dto.trainerIds().stream()
+                .anyMatch(id -> id == null || id <= 0)) {
+            throw new IllegalArgumentException("Invalid trainer assignment request");
+        }
+
+        Trainee trainee = authorizationService.requireTraineeOwner(credentials, dto.traineeUsername());
+
+        Set<Trainer> trainers = new HashSet<>();
+
+        for (Long trainerId : dto.trainerIds()) {
+            Trainer trainer = trainerRepository.findById(trainerId)
+                    .orElseThrow(() -> new EntityNotFoundException("Trainer not found: " + trainerId));
+
+            trainers.add(trainer);
+        }
+
+        Set<Trainer> currentTrainers = new HashSet<>(trainee.getTrainers());
+
+        for (Trainer trainer : currentTrainers) {
+            if (!trainers.contains(trainer)) {
+                trainee.removeTrainer(trainer);
+            }
+        }
+
+        for (Trainer trainer : trainers) {
+            if (!currentTrainers.contains(trainer)) {
+                trainee.assignTrainer(trainer);
+            }
+        }
+
+        log.info("Updated trainer assignments for trainee={}", dto.traineeUsername());
+
+        return Set.copyOf(trainee.getTrainers());
     }
 
 }

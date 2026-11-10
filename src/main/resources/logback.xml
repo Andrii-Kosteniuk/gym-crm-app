@@ -1,0 +1,39 @@
+<configuration>
+
+    <property resource="logging.properties"/>
+
+    <property name="LOG_PATTERN"
+              value="%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"/>
+
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <logger name="com.training.gym"
+            level="${logging.level.com.training.gym}"/>
+
+    <logger name="org.springframework"
+            level="${logging.level.org.springframework}"/>
+
+    <logger name="org.hibernate"
+            level="${logging.level.org.hibernate}"/>
+
+    <logger name="com.zaxxer.hikari"
+            level="${logging.level.com.zaxxer.hikari}"/>
+
+    <logger name="org.flywaydb"
+            level="${logging.level.org.flywaydb}"/>
+
+    <logger name="org.hibernate.SQL"
+            level="${logging.level.org.hibernate.SQL}"/>
+
+    <logger name="org.hibernate.orm.jdbc.bind"
+            level="${logging.level.org.hibernate.orm.jdbc.bind}"/>
+
+    <root level="${logging.level.root}">
+        <appender-ref ref="CONSOLE"/>
+    </root>
+
+</configuration>
