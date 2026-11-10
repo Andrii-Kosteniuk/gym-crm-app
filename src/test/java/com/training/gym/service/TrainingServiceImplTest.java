@@ -1,384 +1,184 @@
 package com.training.gym.service;
 
 import com.training.gym.dao.TraineeRepository;
-import com.training.gym.dao.TrainerRepository;
 import com.training.gym.dao.TrainingRepository;
+import com.training.gym.dao.TrainingTypeRepository;
+import com.training.gym.dto.auth.Credentials;
 import com.training.gym.dto.training.CreateTrainingDto;
+import com.training.gym.exception.AccessDeniedException;
 import com.training.gym.exception.EntityNotFoundException;
 import com.training.gym.mapper.TrainingMapper;
-import com.training.gym.model.Training;
-import com.training.gym.model.TrainingType;
-import com.training.gym.util.IdGenerator;
+import com.training.gym.model.*;
 import com.training.gym.validation.TrainingDtoValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.time.Duration;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class TrainingServiceImplTest {
-
-    private static final Long TRAINING_ID = 1L;
-    private static final Long TRAINEE_ID = 1L;
-    private static final Long TRAINER_ID = 1L;
-
+    private static final long TRAINER_ID = 2L, TRAINEE_ID = 3L, TYPE_ID = 4L, TRAINING_ID = 5L;
     @Mock
-    private TrainingRepository trainingRepository;
-
+    TrainingRepository trainingRepository;
     @Mock
-    private TraineeRepository traineeRepository;
-
+    TraineeRepository traineeRepository;
     @Mock
-    private TrainerRepository trainerRepository;
-
+    TrainingTypeRepository trainingTypeRepository;
     @Mock
-    private IdGenerator idGenerator;
-
+    TrainingMapper trainingMapper;
     @Mock
-    private TrainingMapper trainingMapper;
-
+    TrainingDtoValidator trainingValidator;
     @Mock
-    private TrainingDtoValidator dtoValidator;
-
-
+    ProfileAuthorizationService authorizationService;
+    @Mock
+    CredentialService credentialService;
     @InjectMocks
-    private TrainingServiceImpl trainingService;
+    TrainingServiceImpl service;
 
-    private Training training;
-    private CreateTrainingDto createDto;
+    Credentials credentials;
+    Trainer trainer;
+    Trainee trainee;
+    TrainingType type;
+    Training training;
+    CreateTrainingDto dto;
 
     @BeforeEach
     void setUp() {
-        training = new Training();
-
-        createDto = new CreateTrainingDto(
-                TRAINEE_ID,
-                TRAINER_ID,
-                "Strength Training",
-                new TrainingType(1L, "Strength"),
-                LocalDate.of(2026, 11, 10),
-                Duration.ofMinutes(60)
-        );
+        credentials = new Credentials("trainer.user", "password");
+        trainer = Trainer.builder().id(TRAINER_ID).user(User.builder().userName("trainer.user").build()).build();
+        trainee = Trainee.builder().id(TRAINEE_ID).user(User.builder().userName("trainee.user").build()).build();
+        type = TrainingType.builder().id(TYPE_ID).name("Fitness").build();
+        training = Training.builder().id(TRAINING_ID).trainer(trainer).trainee(trainee).trainingType(type).build();
+        dto = new CreateTrainingDto(TRAINEE_ID, TRAINER_ID, "Session", TYPE_ID,
+                LocalDate.of(2026, 11, 10), 60L);
     }
 
     @Nested
-    class CreateTests {
-
+    class Creation {
         @Test
-        void shouldCreateTrainingSuccessfully() {
-            // Arrange
-            assertEquals(TRAINEE_ID, createDto.traineeId());
-            assertEquals(TRAINER_ID, createDto.trainerId());
+        void createsTrainingUsingAuthorizedTrainerAndResolvedEntities() {
+            when(authorizationService.requireTrainer(credentials))
+                    .thenReturn(trainer);
 
-            when(traineeRepository.existsById(TRAINEE_ID))
-                    .thenReturn(true);
+            when(traineeRepository.findById(TRAINEE_ID))
+                    .thenReturn(Optional.of(trainee));
 
-            when(trainerRepository.existsById(TRAINER_ID))
-                    .thenReturn(true);
+            when(trainingTypeRepository.findById(TYPE_ID))
+                    .thenReturn(Optional.of(type));
 
-            when(trainingMapper.toTraining(createDto))
+            when(trainingMapper.toTraining(dto, trainee, trainer, type))
                     .thenReturn(training);
 
-            when(idGenerator.generate())
-                    .thenReturn(TRAINING_ID);
-
-            when(trainingRepository.save(training))
-                    .thenReturn(training);
-
-            // Act
-            Training result = trainingService.createTraining(createDto);
-
-            // Assert
-            assertNotNull(result);
-            assertSame(training, result);
-            assertEquals(TRAINING_ID, result.getId());
-
-            verify(dtoValidator).validateCreate(createDto);
-            verify(traineeRepository).existsById(TRAINEE_ID);
-            verify(trainerRepository).existsById(TRAINER_ID);
-            verify(trainingMapper).toTraining(createDto);
-            verify(idGenerator).generate();
-            verify(trainingRepository).save(training);
+            when(trainingRepository.save(training)).thenReturn(training);
+            assertSame(training, service.createTraining(credentials, dto));
+            InOrder order = inOrder(authorizationService, trainingValidator, traineeRepository,
+                    trainingTypeRepository, trainingMapper, trainingRepository);
+            order.verify(authorizationService).requireTrainer(credentials);
+            order.verify(trainingValidator).validateCreate(dto);
+            order.verify(traineeRepository).findById(TRAINEE_ID);
+            order.verify(trainingTypeRepository).findById(TYPE_ID);
+            order.verify(trainingMapper).toTraining(dto, trainee, trainer, type);
+            order.verify(trainingRepository).save(training);
         }
 
         @Test
-        void shouldAssignGeneratedIdBeforeSavingTraining() {
-            // Arrange
-            existingTrainingParticipants();
-
-            when(trainingMapper.toTraining(createDto))
-                    .thenReturn(training);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINING_ID);
-
-            when(trainingRepository.save(any(Training.class)))
-                    .thenAnswer(invocation -> {
-                        Training entity = invocation.getArgument(0);
-
-                        assertEquals(TRAINING_ID, entity.getId());
-
-                        return entity;
-                    });
-
-            // Act
-            Training result = trainingService.createTraining(createDto);
-
-            // Assert
-            assertEquals(TRAINING_ID, result.getId());
-
-            ArgumentCaptor<Training> captor =
-                    ArgumentCaptor.forClass(Training.class);
-
-            verify(trainingRepository).save(captor.capture());
-
-            assertSame(training, captor.getValue());
-            assertEquals(TRAINING_ID, captor.getValue().getId());
+        void rejectsUnauthenticatedTrainerBeforeValidationOrPersistence() {
+            when(authorizationService.requireTrainer(credentials)).thenThrow(new SecurityException("Denied"));
+            assertThrows(SecurityException.class, () -> service.createTraining(credentials, dto));
+            verifyNoInteractions(trainingValidator, traineeRepository, trainingTypeRepository, trainingRepository);
         }
 
         @Test
-        void shouldRejectNullCreateTrainingDto() {
-
-            doThrow(new IllegalArgumentException("CreateTrainingDto must not be null"))
-                    .when(dtoValidator)
-                    .validateCreate(isNull());
-
-            // Act
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> trainingService.createTraining(null)
-            );
-
-            // Assert
-            assertEquals(
-                    "CreateTrainingDto must not be null",
-                    exception.getMessage()
-            );
+        void rejectsInvalidDtoBeforeLookingUpReferences() {
+            when(authorizationService.requireTrainer(credentials)).thenReturn(trainer);
+            doThrow(new IllegalArgumentException("Invalid DTO")).when(trainingValidator).validateCreate(dto);
+            assertThrows(IllegalArgumentException.class, () -> service.createTraining(credentials, dto));
+            verifyNoInteractions(traineeRepository, trainingTypeRepository, trainingRepository);
         }
 
         @Test
-        void shouldRejectTrainingWhenTraineeDoesNotExist() {
-            // Arrange
-            when(traineeRepository.existsById(TRAINEE_ID)).thenReturn(false);
-
-            // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> trainingService.createTraining(createDto)
-            );
-
-            // Assert
-            assertEquals(
-                    "Trainee with id %d not found".formatted(TRAINEE_ID),
-                    exception.getMessage()
-            );
-
-            verify(traineeRepository).existsById(TRAINEE_ID);
-
-            verifyNoInteractions(
-                    trainerRepository,
-                    trainingMapper,
-                    idGenerator,
-                    trainingRepository
-            );
+        void rejectsTrainerIdMismatch() {
+            when(authorizationService.requireTrainer(credentials)).thenReturn(trainer);
+            CreateTrainingDto other = new CreateTrainingDto(TRAINEE_ID, 99L, "Session", TYPE_ID,
+                    dto.date(), dto.duration());
+            assertThrows(AccessDeniedException.class, () -> service.createTraining(credentials, other));
+            verifyNoInteractions(traineeRepository, trainingTypeRepository, trainingRepository);
         }
 
         @Test
-        void shouldRejectTrainingWhenTrainerDoesNotExist() {
-            // Arrange
-            when(traineeRepository.existsById(TRAINEE_ID))
-
-                    .thenReturn(true);
-            when(trainerRepository.existsById(TRAINER_ID))
-                    .thenReturn(false);
-
-            // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> trainingService.createTraining(createDto)
-            );
-
-            // Assert
-            assertEquals(
-                    "Trainer with id " + TRAINER_ID + " not found",
-                    exception.getMessage()
-            );
-
-            verify(trainerRepository).existsById(TRAINER_ID);
-            verify(dtoValidator).validateCreate(createDto);
-
-            verifyNoInteractions(
-                    trainingMapper,
-                    idGenerator,
-                    trainingRepository
-            );
+        void rejectsMissingTrainee() {
+            when(authorizationService.requireTrainer(credentials)).thenReturn(trainer);
+            when(traineeRepository.findById(TRAINEE_ID)).thenReturn(Optional.empty());
+            assertThrows(EntityNotFoundException.class, () -> service.createTraining(credentials, dto));
+            verifyNoInteractions(trainingTypeRepository, trainingRepository);
         }
 
         @Test
-        void shouldReturnEntityReturnedByRepository() {
-            // Arrange
-            Training persistedTraining = new Training();
-            persistedTraining.setId(TRAINING_ID);
-
-            when(traineeRepository.existsById(TRAINEE_ID))
-                    .thenReturn(true);
-
-            when(trainerRepository.existsById(TRAINER_ID))
-                    .thenReturn(true);
-
-            when(trainingMapper.toTraining(createDto))
-                    .thenReturn(training);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINING_ID);
-
-            when(trainingRepository.save(training))
-                    .thenReturn(persistedTraining);
-
-            // Act
-            Training result = trainingService.createTraining(createDto);
-
-            // Assert
-            assertSame(persistedTraining, result);
-
-            verify(trainingRepository).save(training);
+        void rejectsMissingTrainingType() {
+            when(authorizationService.requireTrainer(credentials)).thenReturn(trainer);
+            when(traineeRepository.findById(TRAINEE_ID)).thenReturn(Optional.of(trainee));
+            when(trainingTypeRepository.findById(TYPE_ID)).thenReturn(Optional.empty());
+            assertThrows(EntityNotFoundException.class, () -> service.createTraining(credentials, dto));
+            verifyNoInteractions(trainingRepository);
         }
 
         @Test
-        void shouldPropagateRepositoryExceptionDuringCreation() {
-            // Arrange
-
-            existingTrainingParticipants();
-
-            when(trainingMapper.toTraining(createDto))
-                    .thenReturn(training);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINING_ID);
-
-            RuntimeException repositoryException =
-                    new RuntimeException("Storage failure");
-
-            when(trainingRepository.save(training))
-                    .thenThrow(repositoryException);
-
-            // Act
-            RuntimeException exception = assertThrows(
-                    RuntimeException.class,
-                    () -> trainingService.createTraining(createDto)
-            );
-
-            // Assert
-            assertSame(repositoryException, exception);
-
-            verify(trainingRepository).save(training);
+        void propagatesPersistenceFailure() {
+            when(authorizationService.requireTrainer(credentials)).thenReturn(trainer);
+            when(traineeRepository.findById(TRAINEE_ID)).thenReturn(Optional.of(trainee));
+            when(trainingTypeRepository.findById(TYPE_ID)).thenReturn(Optional.of(type));
+            when(trainingMapper.toTraining(dto, trainee, trainer, type)).thenReturn(training);
+            when(trainingRepository.save(training)).thenThrow(new IllegalStateException("Database failure"));
+            assertThrows(IllegalStateException.class, () -> service.createTraining(credentials, dto));
         }
     }
 
     @Nested
-    class GetByIdTests {
-
+    class Lookup {
         @Test
-        void shouldReturnTrainingWhenIdExists() {
-            // Arrange
-            training.setId(TRAINING_ID);
-
-            when(trainingRepository.findById(TRAINING_ID))
-                    .thenReturn(Optional.of(training));
-
-            // Act
-            Training result =
-                    trainingService.getTrainingById(TRAINING_ID);
-
-            // Assert
-            assertNotNull(result);
-            assertSame(training, result);
-            assertEquals(TRAINING_ID, result.getId());
-
-            verify(trainingRepository).findById(TRAINING_ID);
+        void allowsTrainerParticipantToReadTraining() {
+            when(credentialService.authenticate(credentials)).thenReturn(trainer.getUser());
+            when(trainingRepository.findById(TRAINING_ID)).thenReturn(Optional.of(training));
+            assertSame(training, service.getTrainingById(credentials, TRAINING_ID));
         }
 
         @Test
-        void shouldThrowExceptionWhenTrainingDoesNotExist() {
-            // Arrange
-            Long nonexistentId = 999L;
-
-            when(trainingRepository.findById(nonexistentId))
-                    .thenReturn(Optional.empty());
-
-            // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> trainingService.getTrainingById(nonexistentId)
-            );
-
-            // Assert
-            assertEquals(
-                    "Training with id 999 not found",
-                    exception.getMessage()
-            );
-
-            verify(trainingRepository).findById(nonexistentId);
+        void allowsTraineeParticipantToReadTraining() {
+            when(credentialService.authenticate(credentials)).thenReturn(trainee.getUser());
+            when(trainingRepository.findById(TRAINING_ID)).thenReturn(Optional.of(training));
+            assertSame(training, service.getTrainingById(credentials, TRAINING_ID));
         }
 
         @Test
-        void shouldReturnCorrectTrainingForRequestedId() {
-            // Arrange
-            Long requestedId = 5L;
-
-            Training expectedTraining = new Training();
-            expectedTraining.setId(requestedId);
-
-            when(trainingRepository.findById(requestedId))
-                    .thenReturn(Optional.of(expectedTraining));
-
-            // Act
-            Training result =
-                    trainingService.getTrainingById(requestedId);
-
-            // Assert
-            assertSame(expectedTraining, result);
-            assertEquals(requestedId, result.getId());
-
-            verify(trainingRepository).findById(requestedId);
+        void hidesTrainingFromNonParticipant() {
+            when(credentialService.authenticate(credentials)).thenReturn(User.builder().userName("stranger").build());
+            when(trainingRepository.findById(TRAINING_ID)).thenReturn(Optional.of(training));
+            assertThrows(EntityNotFoundException.class, () -> service.getTrainingById(credentials, TRAINING_ID));
         }
 
         @Test
-        void shouldNotCallOtherDependenciesWhenRetrievingTraining() {
-            // Arrange
-            training.setId(TRAINING_ID);
-
-            when(trainingRepository.findById(TRAINING_ID))
-                    .thenReturn(Optional.of(training));
-
-            // Act
-            Training result =
-                    trainingService.getTrainingById(TRAINING_ID);
-
-            // Assert
-            assertNotNull(result);
-
-            verify(trainingRepository).findById(TRAINING_ID);
-            verifyNoInteractions(idGenerator, trainingMapper);
+        void throwsWhenTrainingDoesNotExist() {
+            when(credentialService.authenticate(credentials)).thenReturn(trainer.getUser());
+            when(trainingRepository.findById(TRAINING_ID)).thenReturn(Optional.empty());
+            assertThrows(EntityNotFoundException.class, () -> service.getTrainingById(credentials, TRAINING_ID));
         }
-    }
 
-    private void existingTrainingParticipants() {
-        when(traineeRepository.existsById(TRAINEE_ID))
-                .thenReturn(true);
-
-        when(trainerRepository.existsById(TRAINER_ID))
-                .thenReturn(true);
+        @Test
+        void doesNotQueryRepositoryWhenAuthenticationFails() {
+            when(credentialService.authenticate(credentials)).thenThrow(new SecurityException("Denied"));
+            assertThrows(SecurityException.class, () -> service.getTrainingById(credentials, TRAINING_ID));
+            verifyNoInteractions(trainingRepository);
+        }
     }
 }

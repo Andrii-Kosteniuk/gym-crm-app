@@ -34,13 +34,13 @@ class UserNameGeneratorImplTest {
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     usernameExists
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk", result);
+            assertEquals("james.bond", result);
         }
 
         @Test
@@ -50,13 +50,13 @@ class UserNameGeneratorImplTest {
 
             // Act
             String result = usernameGenerator.generate(
-                    "ANDRII",
-                    "KOSTENIUK",
+                    "James",
+                    "Bond",
                     usernameExists
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk", result);
+            assertEquals("james.bond", result);
         }
 
         @Test
@@ -66,18 +66,18 @@ class UserNameGeneratorImplTest {
 
             // Act
             String result = usernameGenerator.generate(
-                    "  Andrii  ",
-                    "  Kosteniuk  ",
+                    "  James  ",
+                    "  Bond  ",
                     usernameExists
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk", result);
+            assertEquals("james.bond", result);
         }
 
         @ParameterizedTest
         @CsvSource({
-                "Andrii, Kosteniuk, andrii.kosteniuk",
+                "James, Bond, james.bond",
                 "JAMES, BOND, james.bond",
                 "Alina, Bond, alina.bond",
                 "michael, born, michael.born",
@@ -133,78 +133,78 @@ class UserNameGeneratorImplTest {
         void shouldAppendSuffixOneWhenBaseUsernameExists() {
             // Arrange
             Set<String> existingUsernames = Set.of(
-                    "andrii.kosteniuk"
+                    "james.bond"
             );
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk1", result);
+            assertEquals("james.bond1", result);
         }
 
         @Test
         void shouldIncrementSuffixUntilUniqueUsernameIsFound() {
             // Arrange
             Set<String> existingUsernames = Set.of(
-                    "andrii.kosteniuk",
-                    "andrii.kosteniuk1",
-                    "andrii.kosteniuk2",
-                    "andrii.kosteniuk3"
+                    "james.bond",
+                    "james.bond1",
+                    "james.bond2",
+                    "james.bond3"
             );
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk4", result);
+            assertEquals("james.bond4", result);
         }
 
         @Test
         void shouldUseFirstAvailableSuffix() {
             // Arrange
             Set<String> existingUsernames = Set.of(
-                    "andrii.kosteniuk",
-                    "andrii.kosteniuk1",
-                    "andrii.kosteniuk3"
+                    "james.bond",
+                    "james.bond1",
+                    "james.bond3"
             );
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk2", result);
+            assertEquals("james.bond2", result);
         }
 
         @Test
         void shouldNotAppendSuffixWhenBaseUsernameIsAvailable() {
             // Arrange
             Set<String> existingUsernames = Set.of(
-                    "andrii.kosteniuk1",
-                    "andrii.kosteniuk2"
+                    "james.bond1",
+                    "james.bond2"
             );
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk", result);
+            assertEquals("james.bond", result);
         }
 
         @Test
@@ -214,31 +214,31 @@ class UserNameGeneratorImplTest {
 
             // Act
             String first = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
             existingUsernames.add(first);
 
             String second = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
             existingUsernames.add(second);
 
             String third = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     existingUsernames::contains
             );
             existingUsernames.add(third);
 
             // Assert
             assertAll(
-                    () -> assertEquals("andrii.kosteniuk", first),
-                    () -> assertEquals("andrii.kosteniuk1", second),
-                    () -> assertEquals("andrii.kosteniuk2", third),
+                    () -> assertEquals("james.bond", first),
+                    () -> assertEquals("james.bond1", second),
+                    () -> assertEquals("james.bond2", third),
                     () -> assertEquals(3, existingUsernames.size())
             );
         }
@@ -251,25 +251,25 @@ class UserNameGeneratorImplTest {
             Predicate<String> usernameExists = username -> {
                 checkedUsernames.add(username);
 
-                return username.equals("andrii.kosteniuk")
-                        || username.equals("andrii.kosteniuk1");
+                return username.equals("james.bond")
+                        || username.equals("james.bond1");
             };
 
             // Act
             String result = usernameGenerator.generate(
-                    "Andrii",
-                    "Kosteniuk",
+                    "James",
+                    "Bond",
                     usernameExists
             );
 
             // Assert
-            assertEquals("andrii.kosteniuk2", result);
+            assertEquals("james.bond2", result);
 
             assertEquals(
                     Set.of(
-                            "andrii.kosteniuk",
-                            "andrii.kosteniuk1",
-                            "andrii.kosteniuk2"
+                            "james.bond",
+                            "james.bond1",
+                            "james.bond2"
                     ),
                     checkedUsernames
             );
@@ -291,7 +291,7 @@ class UserNameGeneratorImplTest {
                     IllegalArgumentException.class,
                     () -> usernameGenerator.generate(
                             firstName,
-                            "Kosteniuk",
+                            "Bond",
                             usernameExists
                     )
             );
@@ -314,7 +314,7 @@ class UserNameGeneratorImplTest {
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
                     () -> usernameGenerator.generate(
-                            "Andrii",
+                            "James",
                             lastName,
                             usernameExists
                     )
@@ -333,8 +333,8 @@ class UserNameGeneratorImplTest {
             NullPointerException exception = assertThrows(
                     NullPointerException.class,
                     () -> usernameGenerator.generate(
-                            "Andrii",
-                            "Kosteniuk",
+                            "James",
+                            "Bond",
                             null
                     )
             );

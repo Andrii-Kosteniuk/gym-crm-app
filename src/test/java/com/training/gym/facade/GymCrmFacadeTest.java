@@ -1,26 +1,33 @@
 package com.training.gym.facade;
 
+import com.training.gym.dto.auth.ChangePasswordDto;
+import com.training.gym.dto.auth.Credentials;
+import com.training.gym.dto.trainee.CreateTraineeDto;
+import com.training.gym.dto.trainee.TraineeTrainingCriteria;
+import com.training.gym.dto.trainee.UpdateTraineeDto;
+import com.training.gym.dto.trainee.UpdateTraineeTrainersDto;
+import com.training.gym.dto.trainer.CreateTrainerDto;
+import com.training.gym.dto.trainer.TrainerTrainingCriteria;
+import com.training.gym.dto.trainer.UpdateTrainerDto;
+import com.training.gym.dto.training.CreateTrainingDto;
 import com.training.gym.exception.EntityNotFoundException;
 import com.training.gym.exception.ResourceConflictException;
 import com.training.gym.model.Trainee;
-import com.training.gym.dto.trainee.CreateTraineeDto;
-import com.training.gym.dto.trainee.UpdateTraineeDto;
-import com.training.gym.service.TraineeService;
 import com.training.gym.model.Trainer;
-import com.training.gym.dto.trainer.CreateTrainerDto;
-import com.training.gym.dto.trainer.UpdateTrainerDto;
-import com.training.gym.service.TrainerService;
 import com.training.gym.model.Training;
-import com.training.gym.dto.training.CreateTrainingDto;
+import com.training.gym.service.TraineeService;
+import com.training.gym.service.TrainerService;
 import com.training.gym.service.TrainingService;
-
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.util.List;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,6 +38,7 @@ class GymCrmFacadeTest {
     private static final Long TRAINEE_ID = 1L;
     private static final Long TRAINER_ID = 2L;
     private static final Long TRAINING_ID = 3L;
+    public static final String JAMES_BOND = "james.bond";
 
     @Mock
     private TraineeService traineeService;
@@ -43,6 +51,13 @@ class GymCrmFacadeTest {
 
     @InjectMocks
     private GymCrmFacade gymCrmFacade;
+
+    Credentials credentials;
+
+    @BeforeEach
+    void setUp() {
+        credentials = mock(Credentials.class);
+    }
 
     @Nested
     class TraineeFacadeTests {
@@ -78,17 +93,17 @@ class GymCrmFacadeTest {
             Trainee expectedTrainee = new Trainee();
             expectedTrainee.setId(TRAINEE_ID);
 
-            when(traineeService.updateTrainee(dto))
+            when(traineeService.updateTrainee(credentials, dto))
                     .thenReturn(expectedTrainee);
 
             // Act
-            Trainee result = gymCrmFacade.updateTrainee(dto);
+            Trainee result = gymCrmFacade.updateTrainee(credentials, dto);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTrainee, result);
 
-            verify(traineeService).updateTrainee(dto);
+            verify(traineeService).updateTrainee(credentials, dto);
             verifyNoInteractions(trainerService, trainingService);
         }
 
@@ -98,28 +113,28 @@ class GymCrmFacadeTest {
             Trainee expectedTrainee = new Trainee();
             expectedTrainee.setId(TRAINEE_ID);
 
-            when(traineeService.getTraineeById(TRAINEE_ID))
+            when(traineeService.getTraineeById(credentials, TRAINEE_ID))
                     .thenReturn(expectedTrainee);
 
             // Act
-            Trainee result = gymCrmFacade.getTraineeById(TRAINEE_ID);
+            Trainee result = gymCrmFacade.getTraineeById(credentials, TRAINEE_ID);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTrainee, result);
             assertEquals(TRAINEE_ID, result.getId());
 
-            verify(traineeService).getTraineeById(TRAINEE_ID);
+            verify(traineeService).getTraineeById(credentials, TRAINEE_ID);
             verifyNoInteractions(trainerService, trainingService);
         }
 
         @Test
         void shouldDelegateDeleteTraineeToTraineeService() {
             // Act
-            gymCrmFacade.deleteTrainee(TRAINEE_ID);
+            gymCrmFacade.deleteTraineeByUsername(credentials, JAMES_BOND);
 
             // Assert
-            verify(traineeService).removeTrainee(TRAINEE_ID);
+            verify(traineeService).removeTraineeByUsername(credentials, JAMES_BOND);
 
             verifyNoInteractions(
                     trainerService,
@@ -161,19 +176,19 @@ class GymCrmFacadeTest {
                             "Trainee not found"
                     );
 
-            when(traineeService.updateTrainee(dto))
+            when(traineeService.updateTrainee(credentials, dto))
                     .thenThrow(expectedException);
 
             // Act
             EntityNotFoundException exception = assertThrows(
                     EntityNotFoundException.class,
-                    () -> gymCrmFacade.updateTrainee(dto)
+                    () -> gymCrmFacade.updateTrainee(credentials, dto)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(traineeService).updateTrainee(dto);
+            verify(traineeService).updateTrainee(credentials, dto);
         }
 
         @Test
@@ -184,19 +199,19 @@ class GymCrmFacadeTest {
                             "Trainee with id 1 not found"
                     );
 
-            when(traineeService.getTraineeById(TRAINEE_ID))
+            when(traineeService.getTraineeById(credentials, TRAINEE_ID))
                     .thenThrow(expectedException);
 
             // Act
             EntityNotFoundException exception = assertThrows(
                     EntityNotFoundException.class,
-                    () -> gymCrmFacade.getTraineeById(TRAINEE_ID)
+                    () -> gymCrmFacade.getTraineeById(credentials, TRAINEE_ID)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(traineeService).getTraineeById(TRAINEE_ID);
+            verify(traineeService).getTraineeById(credentials, TRAINEE_ID);
         }
 
         @Test
@@ -209,18 +224,18 @@ class GymCrmFacadeTest {
 
             doThrow(expectedException)
                     .when(traineeService)
-                    .removeTrainee(TRAINEE_ID);
+                    .removeTraineeByUsername(credentials, JAMES_BOND);
 
             // Act
             ResourceConflictException exception = assertThrows(
                     ResourceConflictException.class,
-                    () -> gymCrmFacade.deleteTrainee(TRAINEE_ID)
+                    () -> gymCrmFacade.deleteTraineeByUsername(credentials, JAMES_BOND)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(traineeService).removeTrainee(TRAINEE_ID);
+            verify(traineeService).removeTraineeByUsername(credentials, JAMES_BOND);
             verifyNoInteractions(trainerService, trainingService);
         }
 
@@ -236,11 +251,136 @@ class GymCrmFacadeTest {
         @Test
         void shouldPassNullIdToTraineeServiceWithoutModification() {
             // Act
-            gymCrmFacade.getTraineeById(null);
+            gymCrmFacade.getTraineeById(credentials, null);
 
             // Assert
-            verify(traineeService).getTraineeById(null);
+            verify(traineeService).getTraineeById(credentials, null);
         }
+
+
+        @Test
+        void shouldDelegateFindTraineeByUsernameToTraineeService() {
+            // Arrange
+            Trainee expectedTrainee = new Trainee();
+            expectedTrainee.setId(TRAINEE_ID);
+
+            when(traineeService.findByUserName(credentials, JAMES_BOND))
+                    .thenReturn(expectedTrainee);
+
+            // Act
+            Trainee result = gymCrmFacade.findTraineeByUsername(
+                    credentials, JAMES_BOND
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainee, result);
+
+            verify(traineeService).findByUserName(credentials, JAMES_BOND);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateActivateTraineeToTraineeService() {
+            // Arrange
+            Trainee trainee = new Trainee();
+            trainee.setId(TRAINEE_ID);
+
+            // Act
+            gymCrmFacade.activateTrainee(credentials, trainee);
+
+            // Assert
+            verify(traineeService).activateTrainee(credentials, trainee);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateDeactivateTraineeToTraineeService() {
+            // Arrange
+            Trainee trainee = new Trainee();
+            trainee.setId(TRAINEE_ID);
+
+            // Act
+            gymCrmFacade.deactivateTrainee(credentials, trainee);
+
+            // Assert
+            verify(traineeService).deactivateTrainee(credentials, trainee);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateFindTraineeTrainingsToTraineeService() {
+            // Arrange
+            TraineeTrainingCriteria criteria =
+                    mock(TraineeTrainingCriteria.class);
+
+            Training training = new Training();
+            training.setId(TRAINING_ID);
+
+            List<Training> expectedTrainings = List.of(training);
+
+            when(traineeService.findTrainings(
+                    credentials, JAMES_BOND, criteria
+            )).thenReturn(expectedTrainings);
+
+            // Act
+            List<Training> result = gymCrmFacade.findTraineeTrainings(
+                    credentials, JAMES_BOND, criteria
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainings, result);
+            assertEquals(1, result.size());
+
+            verify(traineeService).findTrainings(
+                    credentials, JAMES_BOND, criteria
+            );
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateChangeTraineePasswordToTraineeService() {
+            // Arrange
+            ChangePasswordDto dto = mock(ChangePasswordDto.class);
+
+            // Act
+            gymCrmFacade.changeTraineePassword(credentials, dto);
+
+            // Assert
+            verify(traineeService).changePassword(credentials, dto);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateReplaceTraineeTrainersToTraineeService() {
+            // Arrange
+            UpdateTraineeTrainersDto dto =
+                    mock(UpdateTraineeTrainersDto.class);
+
+            Trainer trainer = new Trainer();
+            trainer.setId(TRAINER_ID);
+
+            Set<Trainer> expectedTrainers = Set.of(trainer);
+
+            when(traineeService.replaceTrainers(credentials, dto))
+                    .thenReturn(expectedTrainers);
+
+            // Act
+            Set<Trainer> result = gymCrmFacade.replaceTraineeTrainers(
+                    credentials, dto
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainers, result);
+            assertEquals(1, result.size());
+            assertTrue(result.contains(trainer));
+
+            verify(traineeService).replaceTrainers(credentials, dto);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
     }
 
     @Nested
@@ -277,17 +417,17 @@ class GymCrmFacadeTest {
             Trainer expectedTrainer = new Trainer();
             expectedTrainer.setId(TRAINER_ID);
 
-            when(trainerService.updateTrainer(dto))
+            when(trainerService.updateTrainer(credentials, dto))
                     .thenReturn(expectedTrainer);
 
             // Act
-            Trainer result = gymCrmFacade.updateTrainer(dto);
+            Trainer result = gymCrmFacade.updateTrainer(credentials, dto);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTrainer, result);
 
-            verify(trainerService).updateTrainer(dto);
+            verify(trainerService).updateTrainer(credentials, dto);
             verifyNoInteractions(traineeService, trainingService);
         }
 
@@ -297,18 +437,18 @@ class GymCrmFacadeTest {
             Trainer expectedTrainer = new Trainer();
             expectedTrainer.setId(TRAINER_ID);
 
-            when(trainerService.getTrainerById(TRAINER_ID))
+            when(trainerService.getTrainerById(credentials, TRAINER_ID))
                     .thenReturn(expectedTrainer);
 
             // Act
-            Trainer result = gymCrmFacade.getTrainerById(TRAINER_ID);
+            Trainer result = gymCrmFacade.getTrainerById(credentials, TRAINER_ID);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTrainer, result);
             assertEquals(TRAINER_ID, result.getId());
 
-            verify(trainerService).getTrainerById(TRAINER_ID);
+            verify(trainerService).getTrainerById(credentials, TRAINER_ID);
             verifyNoInteractions(traineeService, trainingService);
         }
 
@@ -345,19 +485,19 @@ class GymCrmFacadeTest {
                             "Trainer not found"
                     );
 
-            when(trainerService.updateTrainer(dto))
+            when(trainerService.updateTrainer(credentials, dto))
                     .thenThrow(expectedException);
 
             // Act
             EntityNotFoundException exception = assertThrows(
                     EntityNotFoundException.class,
-                    () -> gymCrmFacade.updateTrainer(dto)
+                    () -> gymCrmFacade.updateTrainer(credentials, dto)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(trainerService).updateTrainer(dto);
+            verify(trainerService).updateTrainer(credentials, dto);
         }
 
         @Test
@@ -368,19 +508,19 @@ class GymCrmFacadeTest {
                             "Trainer with id 2 not found"
                     );
 
-            when(trainerService.getTrainerById(TRAINER_ID))
+            when(trainerService.getTrainerById(credentials, TRAINER_ID))
                     .thenThrow(expectedException);
 
             // Act
             EntityNotFoundException exception = assertThrows(
                     EntityNotFoundException.class,
-                    () -> gymCrmFacade.getTrainerById(TRAINER_ID)
+                    () -> gymCrmFacade.getTrainerById(credentials, TRAINER_ID)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(trainerService).getTrainerById(TRAINER_ID);
+            verify(trainerService).getTrainerById(credentials, TRAINER_ID);
         }
 
         @Test
@@ -395,11 +535,147 @@ class GymCrmFacadeTest {
         @Test
         void shouldPassNullIdToTrainerServiceWithoutModification() {
             // Act
-            gymCrmFacade.getTrainerById(null);
+            gymCrmFacade.getTrainerById(credentials, null);
 
             // Assert
-            verify(trainerService).getTrainerById(null);
+            verify(trainerService).getTrainerById(credentials, null);
         }
+
+
+        @Test
+        void shouldDelegateFindTrainerByUsernameToTrainerService() {
+            // Arrange
+            Trainer expectedTrainer = new Trainer();
+            expectedTrainer.setId(TRAINER_ID);
+
+            when(trainerService.findByUsername(credentials, JAMES_BOND))
+                    .thenReturn(expectedTrainer);
+
+            // Act
+            Trainer result = gymCrmFacade.findTrainerByUsername(
+                    credentials, JAMES_BOND
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainer, result);
+
+            verify(trainerService).findByUsername(credentials, JAMES_BOND);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateDeleteTrainerToTrainerService() {
+            // Act
+            gymCrmFacade.deleteTrainerByUsername(credentials, JAMES_BOND);
+
+            // Assert
+            verify(trainerService).removeTrainerByUsername(
+                    credentials, JAMES_BOND
+            );
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateActivateTrainerToTrainerService() {
+            // Arrange
+            Trainer trainer = new Trainer();
+            trainer.setId(TRAINER_ID);
+
+            // Act
+            gymCrmFacade.activateTrainer(credentials, trainer);
+
+            // Assert
+            verify(trainerService).activateTrainer(credentials, trainer);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateDeactivateTrainerToTrainerService() {
+            // Arrange
+            Trainer trainer = new Trainer();
+            trainer.setId(TRAINER_ID);
+
+            // Act
+            gymCrmFacade.deactivateTrainer(credentials, trainer);
+
+            // Assert
+            verify(trainerService).deactivateTrainer(credentials, trainer);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateFindTrainerTrainingsToTrainerService() {
+            // Arrange
+            TrainerTrainingCriteria criteria =
+                    mock(TrainerTrainingCriteria.class);
+
+            Training training = new Training();
+            training.setId(TRAINING_ID);
+
+            List<Training> expectedTrainings = List.of(training);
+
+            when(trainerService.findTrainings(
+                    credentials, JAMES_BOND, criteria
+            )).thenReturn(expectedTrainings);
+
+            // Act
+            List<Training> result = gymCrmFacade.findTrainerTrainings(
+                    credentials, JAMES_BOND, criteria
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainings, result);
+            assertEquals(1, result.size());
+
+            verify(trainerService).findTrainings(
+                    credentials, JAMES_BOND, criteria
+            );
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateGetUnassignedTrainersToTrainerService() {
+            // Arrange
+            Trainer trainer = new Trainer();
+            trainer.setId(TRAINER_ID);
+
+            List<Trainer> expectedTrainers = List.of(trainer);
+
+            when(trainerService.getUnassignedTrainers(
+                    credentials, JAMES_BOND
+            )).thenReturn(expectedTrainers);
+
+            // Act
+            List<Trainer> result = gymCrmFacade.getUnassignedTrainers(
+                    credentials, JAMES_BOND
+            );
+
+            // Assert
+            assertNotNull(result);
+            assertSame(expectedTrainers, result);
+            assertEquals(1, result.size());
+
+            verify(trainerService).getUnassignedTrainers(
+                    credentials, JAMES_BOND
+            );
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldDelegateChangeTrainerPasswordToTrainerService() {
+            // Arrange
+            ChangePasswordDto dto = mock(ChangePasswordDto.class);
+
+            // Act
+            gymCrmFacade.changeTrainerPassword(credentials, dto);
+
+            // Assert
+            verify(trainerService).changePassword(credentials, dto);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
     }
 
     @Nested
@@ -413,18 +689,18 @@ class GymCrmFacadeTest {
             Training expectedTraining = new Training();
             expectedTraining.setId(TRAINING_ID);
 
-            when(trainingService.createTraining(dto))
+            when(trainingService.createTraining(credentials, dto))
                     .thenReturn(expectedTraining);
 
             // Act
-            Training result = gymCrmFacade.createTraining(dto);
+            Training result = gymCrmFacade.createTraining(credentials, dto);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTraining, result);
             assertEquals(TRAINING_ID, result.getId());
 
-            verify(trainingService).createTraining(dto);
+            verify(trainingService).createTraining(credentials, dto);
             verifyNoInteractions(traineeService, trainerService);
         }
 
@@ -434,18 +710,18 @@ class GymCrmFacadeTest {
             Training expectedTraining = new Training();
             expectedTraining.setId(TRAINING_ID);
 
-            when(trainingService.getTrainingById(TRAINING_ID))
+            when(trainingService.getTrainingById(credentials, TRAINING_ID))
                     .thenReturn(expectedTraining);
 
             // Act
-            Training result = gymCrmFacade.getTrainingById(TRAINING_ID);
+            Training result = gymCrmFacade.getTrainingById(credentials, TRAINING_ID);
 
             // Assert
             assertNotNull(result);
             assertSame(expectedTraining, result);
             assertEquals(TRAINING_ID, result.getId());
 
-            verify(trainingService).getTrainingById(TRAINING_ID);
+            verify(trainingService).getTrainingById(credentials, TRAINING_ID);
             verifyNoInteractions(traineeService, trainerService);
         }
 
@@ -457,19 +733,19 @@ class GymCrmFacadeTest {
             RuntimeException expectedException =
                     new RuntimeException("Training creation failed");
 
-            when(trainingService.createTraining(dto))
+            when(trainingService.createTraining(credentials, dto))
                     .thenThrow(expectedException);
 
             // Act
             RuntimeException exception = assertThrows(
                     RuntimeException.class,
-                    () -> gymCrmFacade.createTraining(dto)
+                    () -> gymCrmFacade.createTraining(credentials, dto)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(trainingService).createTraining(dto);
+            verify(trainingService).createTraining(credentials, dto);
         }
 
         @Test
@@ -480,37 +756,144 @@ class GymCrmFacadeTest {
                             "Training with id 3 not found"
                     );
 
-            when(trainingService.getTrainingById(TRAINING_ID))
+            when(trainingService.getTrainingById(credentials, TRAINING_ID))
                     .thenThrow(expectedException);
 
             // Act
             EntityNotFoundException exception = assertThrows(
                     EntityNotFoundException.class,
-                    () -> gymCrmFacade.getTrainingById(TRAINING_ID)
+                    () -> gymCrmFacade.getTrainingById(credentials, TRAINING_ID)
             );
 
             // Assert
             assertSame(expectedException, exception);
 
-            verify(trainingService).getTrainingById(TRAINING_ID);
+            verify(trainingService).getTrainingById(credentials, TRAINING_ID);
         }
 
         @Test
         void shouldPassNullDtoToTrainingServiceWithoutModification() {
             // Act
-            gymCrmFacade.createTraining(null);
+            gymCrmFacade.createTraining(credentials, null);
 
             // Assert
-            verify(trainingService).createTraining(null);
+            verify(trainingService).createTraining(credentials, null);
         }
 
         @Test
         void shouldPassNullIdToTrainingServiceWithoutModification() {
             // Act
-            gymCrmFacade.getTrainingById(null);
+            gymCrmFacade.getTrainingById(credentials, null);
 
             // Assert
-            verify(trainingService).getTrainingById(null);
+            verify(trainingService).getTrainingById(credentials, null);
         }
+
+// TraineeFacadeTests
+
+        @Test
+        void shouldPropagateExceptionWhenTraineeActivationFails() {
+            // Arrange
+            Trainee trainee = new Trainee();
+            trainee.setId(TRAINEE_ID);
+
+            IllegalStateException expectedException =
+                    new IllegalStateException("Trainee is already active");
+
+            doThrow(expectedException)
+                    .when(traineeService)
+                    .activateTrainee(credentials, trainee);
+
+            // Act
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> gymCrmFacade.activateTrainee(credentials, trainee)
+            );
+
+            // Assert
+            assertSame(expectedException, exception);
+
+            verify(traineeService).activateTrainee(credentials, trainee);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+        @Test
+        void shouldPropagateExceptionWhenReplacingTrainersFails() {
+            // Arrange
+            UpdateTraineeTrainersDto dto =
+                    mock(UpdateTraineeTrainersDto.class);
+
+            EntityNotFoundException expectedException =
+                    new EntityNotFoundException("Trainer not found");
+
+            when(traineeService.replaceTrainers(credentials, dto))
+                    .thenThrow(expectedException);
+
+            // Act
+            EntityNotFoundException exception = assertThrows(
+                    EntityNotFoundException.class,
+                    () -> gymCrmFacade.replaceTraineeTrainers(credentials, dto)
+            );
+
+            // Assert
+            assertSame(expectedException, exception);
+
+            verify(traineeService).replaceTrainers(credentials, dto);
+            verifyNoInteractions(trainerService, trainingService);
+        }
+
+// TrainerFacadeTests
+
+        @Test
+        void shouldPropagateExceptionWhenTrainerDeactivationFails() {
+            // Arrange
+            Trainer trainer = new Trainer();
+            trainer.setId(TRAINER_ID);
+
+            IllegalStateException expectedException =
+                    new IllegalStateException("Trainer is already inactive");
+
+            doThrow(expectedException)
+                    .when(trainerService)
+                    .deactivateTrainer(credentials, trainer);
+
+            // Act
+            IllegalStateException exception = assertThrows(
+                    IllegalStateException.class,
+                    () -> gymCrmFacade.deactivateTrainer(credentials, trainer)
+            );
+
+            // Assert
+            assertSame(expectedException, exception);
+
+            verify(trainerService).deactivateTrainer(credentials, trainer);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
+        @Test
+        void shouldPropagateExceptionWhenTrainerUsernameNotFound() {
+            // Arrange
+            EntityNotFoundException expectedException =
+                    new EntityNotFoundException("Trainer not found");
+
+            when(trainerService.findByUsername(credentials, JAMES_BOND))
+                    .thenThrow(expectedException);
+
+            // Act
+            EntityNotFoundException exception = assertThrows(
+                    EntityNotFoundException.class,
+                    () -> gymCrmFacade.findTrainerByUsername(
+                            credentials, JAMES_BOND
+                    )
+            );
+
+            // Assert
+            assertSame(expectedException, exception);
+
+            verify(trainerService).findByUsername(credentials, JAMES_BOND);
+            verifyNoInteractions(traineeService, trainingService);
+        }
+
     }
+
 }

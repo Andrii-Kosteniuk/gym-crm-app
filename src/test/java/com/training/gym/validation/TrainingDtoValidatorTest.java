@@ -30,7 +30,7 @@ class TrainingDtoValidatorTest {
                 "Strength Training",
                 1L,
                 LocalDate.of(2026, 11, 10),
-                Duration.ofMinutes(60)
+                60L
         );
     }
 
@@ -52,8 +52,7 @@ class TrainingDtoValidatorTest {
                     "Strength Training",
                     1L,
                     LocalDate.of(2020, 1, 1),
-                    Duration.ofMinutes(60)
-            );
+                    60L            );
 
             assertDoesNotThrow(
                     () -> validator.validateCreate(dto)
@@ -68,8 +67,7 @@ class TrainingDtoValidatorTest {
                     "Strength Training",
                     1L,
                     LocalDate.of(2026, 11, 10),
-                    Duration.ofSeconds(1)
-            );
+                    60L              );
 
             assertDoesNotThrow(
                     () -> validator.validateCreate(dto)
@@ -98,8 +96,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     null, 2L, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -117,8 +114,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, null, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -137,8 +133,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     traineeId, 2L, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -157,8 +152,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, trainerId, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -178,8 +172,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, name,
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -197,8 +190,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
                     null, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(60)
-            );
+                    60L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,
@@ -215,7 +207,7 @@ class TrainingDtoValidatorTest {
         void shouldRejectNullTrainingDate() {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
-                    1L, null, Duration.ofMinutes(60)
+                    1L, null, 60L
             );
 
             IllegalArgumentException exception = assertThrows(
@@ -252,7 +244,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ZERO
+                    0L
             );
 
             IllegalArgumentException exception = assertThrows(
@@ -271,8 +263,7 @@ class TrainingDtoValidatorTest {
             CreateTrainingDto dto = new CreateTrainingDto(
                     1L, 2L, "Strength Training",
                     1L, LocalDate.of(2026, 11, 10),
-                    Duration.ofMinutes(-30)
-            );
+                    -30L              );
 
             IllegalArgumentException exception = assertThrows(
                     IllegalArgumentException.class,

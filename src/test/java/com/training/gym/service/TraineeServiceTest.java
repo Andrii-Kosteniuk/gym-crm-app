@@ -1,612 +1,742 @@
 package com.training.gym.service;
 
-import com.training.gym.util.IdGenerator;
-import com.training.gym.util.PasswordGenerator;
-import com.training.gym.util.UsernameGenerator;
-import com.training.gym.exception.EntityNotFoundException;
-import com.training.gym.exception.ResourceConflictException;
-import com.training.gym.model.Address;
-import com.training.gym.model.Trainee;
-import com.training.gym.dto.trainee.CreateTraineeDto;
-import com.training.gym.dto.trainee.UpdateTraineeDto;
-import com.training.gym.mapper.TraineeMapper;
 import com.training.gym.dao.TraineeRepository;
 import com.training.gym.dao.TrainerRepository;
-import com.training.gym.dao.TrainingRepository;
+import com.training.gym.dao.UserRepository;
+import com.training.gym.dto.auth.ChangePasswordDto;
+import com.training.gym.dto.auth.Credentials;
+import com.training.gym.dto.trainee.CreateTraineeDto;
+import com.training.gym.dto.trainee.UpdateTraineeDto;
+import com.training.gym.dto.trainee.UpdateTraineeTrainersDto;
+import com.training.gym.exception.AccessDeniedException;
+import com.training.gym.exception.AuthenticationFailedException;
+import com.training.gym.exception.EntityNotFoundException;
+import com.training.gym.mapper.TraineeMapper;
+import com.training.gym.model.Address;
+import com.training.gym.model.Trainee;
+import com.training.gym.model.Trainer;
+import com.training.gym.model.User;
+import com.training.gym.util.PasswordGenerator;
+import com.training.gym.util.UsernameGenerator;
 import com.training.gym.validation.TraineeDtoValidator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.api.function.Executable;
 import org.mockito.ArgumentCaptor;
-import org.mockito.ArgumentMatchers;
+import org.mockito.Captor;
+import org.mockito.InOrder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Predicate;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class TraineeServiceTest {
+class TraineeServiceImplTest {
 
-    private static final Long TRAINEE_ID = 1L;
-    private static final Long TRAINING_ID = 1L;
-    private static final String USERNAME = "andrii.kosteniuk";
-    private static final String PASSWORD = "secure-password";
-
-    @Mock
-    private TraineeRepository traineeRepository;
+    private static final long ID = 1L;
+    private static final String USERNAME = "james.bond";
+    private static final String RAW_PASSWORD = "secure-password";
+    private static final String NEW_PASSWORD = "new-secure-password";
+    private static final String HASH = "encoded-password";
 
     @Mock
-    private TrainingRepository trainingRepository;
-
+    TraineeRepository traineeRepository;
     @Mock
-    private TrainerRepository trainerRepository;
-
+    TrainerRepository trainerRepository;
     @Mock
-    private TraineeMapper traineeMapper;
-
+    UserRepository userRepository;
     @Mock
-    private IdGenerator idGenerator;
-
+    TraineeMapper traineeMapper;
     @Mock
-    private UsernameGenerator usernameGenerator;
-
+    UsernameGenerator usernameGenerator;
     @Mock
-    private PasswordGenerator passwordGenerator;
-
+    PasswordGenerator passwordGenerator;
+    @Mock
+    TraineeDtoValidator traineeValidator;
+    @Mock
+    PasswordEncoder passwordEncoder;
+    @Mock
+    ProfileAuthorizationService authorizationService;
+    @Mock
+    CredentialService credentialService;
     @InjectMocks
-    private TraineeServiceImpl traineeService;
+    TraineeServiceImpl service;
 
-    @Mock
-    private TraineeDtoValidator dtoValidator;
+    @Captor
+    ArgumentCaptor<User> userCaptor;
+    @Captor
+    ArgumentCaptor<Predicate<String>> existsPredicateCaptor;
 
-
+    private Credentials credentials;
+    private Address address;
     private Trainee trainee;
     private CreateTraineeDto createDto;
-    private Address address;
 
     @BeforeEach
     void setUp() {
-        address = Address.builder()
-                .city("Wroclaw")
-                .street("Pl. Grunwaldzki")
-                .buildNumber(10)
-                .zipcode("12-345")
+        credentials = new Credentials(USERNAME, RAW_PASSWORD);
+        address = Address.builder().city("Wroclaw").street("Grunwaldzki")
+                .buildingNumber(10).zipCode("12-345").build();
+        User user = User.builder()
+                .id(ID)
+                .firstName("James")
+                .lastName("Bond")
+                .userName(USERNAME)
+                .password(HASH)
+                .active(true)
                 .build();
-
-        trainee = new Trainee();
-        trainee.setId(TRAINEE_ID);
-        trainee.setFirstName("Andrii");
-        trainee.setLastName("Kosteniuk");
-        trainee.setUserName(USERNAME);
-        trainee.setPassword(PASSWORD);
-        trainee.setActive(true);
-        trainee.setDateOfBirth(LocalDate.of(2000, 10, 19));
-        trainee.setAddress(address);
-
-        createDto = new CreateTraineeDto(
-                "Andrii",
-                "Kosteniuk",
-                LocalDate.of(2000, 10, 19),
-                address
-        );
+        trainee = Trainee.builder().id(ID).user(user)
+                .dateOfBirth(LocalDate.of(2000, 10, 19)).address(address).build();
+        createDto = new CreateTraineeDto("James", "Bond",
+                LocalDate.of(2000, 10, 19), address);
     }
 
+    private void stubCredentialGeneration() {
+        when(usernameGenerator.generate(eq("James"), eq("Bond"), any())).thenReturn(USERNAME);
+        when(passwordGenerator.generate()).thenReturn(RAW_PASSWORD);
+        when(passwordEncoder.encode(RAW_PASSWORD)).thenReturn(HASH);
+    }
+
+    private void stubMapper() {
+        when(traineeMapper.toTrainee(eq(createDto), any(User.class)))
+                .thenAnswer(invocation -> Trainee.builder()
+                        .user(invocation.getArgument(1))
+                        .dateOfBirth(createDto.dateOfBirth())
+                        .address(createDto.address())
+                        .build());
+    }
+
+    private void stubSaveEchoesArgument() {
+        when(traineeRepository.save(any(Trainee.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    private Trainer trainerWithId(long id) {
+        return Trainer.builder().id(id).build();
+    }
 
     @Nested
-    class CreateTraineeTests {
+    class Registration {
 
         @Test
-        void shouldCreateTraineeSuccessfully() {
+        void persistsActiveUserWithHashedPassword() {
             // Arrange
-            when(traineeMapper.toTrainee(createDto))
-                    .thenReturn(trainee);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINEE_ID);
-
-            when(passwordGenerator.generate())
-                    .thenReturn(PASSWORD);
-
-            when(usernameGenerator.generate(
-                    eq("Andrii"),
-                    eq("Kosteniuk"),
-                    ArgumentMatchers.any()
-            )).thenReturn(USERNAME);
-
-            when(traineeRepository.save(any(Trainee.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
+            stubCredentialGeneration();
+            stubMapper();
+            stubSaveEchoesArgument();
 
             // Act
-            Trainee result = traineeService.createTrainee(createDto);
+            Trainee result = service.createTrainee(createDto);
 
             // Assert
-            assertNotNull(result);
-
-            assertAll(
-                    () -> assertEquals(TRAINEE_ID, result.getId()),
-                    () -> assertEquals("Andrii", result.getFirstName()),
-                    () -> assertEquals("Kosteniuk", result.getLastName()),
-                    () -> assertEquals(USERNAME, result.getUserName()),
-                    () -> assertEquals(PASSWORD, result.getPassword()),
-                    () -> assertTrue(result.isActive())
-            );
-
-            verify(traineeMapper).toTrainee(createDto);
-            verify(idGenerator).generate();
-            verify(passwordGenerator).generate();
-            verify(traineeRepository).save(trainee);
+            verify(traineeMapper).toTrainee(eq(createDto), userCaptor.capture());
+            User persistedUser = userCaptor.getValue();
+            assertEquals("James", persistedUser.getFirstName());
+            assertEquals("Bond", persistedUser.getLastName());
+            assertEquals(USERNAME, persistedUser.getUserName());
+            assertEquals(HASH, persistedUser.getPassword());
+            assertNotEquals(RAW_PASSWORD, persistedUser.getPassword());
+            assertTrue(persistedUser.getActive());
+            assertSame(persistedUser, result.getUser());
+            verify(passwordEncoder, times(1)).encode(RAW_PASSWORD);
         }
 
         @Test
-        void shouldThrowExceptionWhenCreateDtoIsNull() {
-            doThrow(new IllegalArgumentException("CreateTrainerDto must not be null"))
-                    .when(dtoValidator)
-                    .validateCreate(isNull());
+        void validatesDtoBeforeSaving() {
+            // Arrange
+            stubCredentialGeneration();
+            stubMapper();
+            stubSaveEchoesArgument();
 
             // Act
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> traineeService.createTrainee(null)
-            );
+            service.createTrainee(createDto);
 
             // Assert
-            assertEquals(
-                    "CreateTrainerDto must not be null",
-                    exception.getMessage()
-            );
-
-            verify(dtoValidator).validateCreate(isNull());
-            verifyNoInteractions(trainerRepository, traineeMapper);
-
-            verifyNoInteractions(
-                    traineeMapper,
-                    traineeRepository,
-                    trainerRepository,
-                    idGenerator,
-                    usernameGenerator,
-                    passwordGenerator
-            );
+            InOrder order = inOrder(traineeValidator, traineeRepository);
+            order.verify(traineeValidator).validateCreate(createDto);
+            order.verify(traineeRepository).save(any(Trainee.class));
         }
 
         @Test
-        void shouldCheckUsernameAgainstBothRepositories() {
+        void returnsEntityReturnedByRepository() {
             // Arrange
-            when(traineeMapper.toTrainee(createDto))
-                    .thenReturn(trainee);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINEE_ID);
-
-            when(passwordGenerator.generate())
-                    .thenReturn(PASSWORD);
-
-            when(usernameGenerator.generate(
-                    anyString(),
-                    anyString(),
-                    ArgumentMatchers.any()
-            )).thenAnswer(invocation -> {
-                Predicate<String> usernameExists =
-                        invocation.getArgument(2);
-
-                boolean exists = usernameExists.test(USERNAME);
-
-                assertFalse(exists);
-
-                return USERNAME;
-            });
-
-            when(traineeRepository.save(any(Trainee.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
+            stubCredentialGeneration();
+            stubMapper();
+            Trainee persisted = Trainee.builder().id(42L).user(trainee.getUser()).build();
+            when(traineeRepository.save(any(Trainee.class))).thenReturn(persisted);
 
             // Act
-            traineeService.createTrainee(createDto);
+            Trainee result = service.createTrainee(createDto);
 
             // Assert
-            verify(traineeRepository).existsByUserName(USERNAME);
-            verify(trainerRepository).existsByUserName(USERNAME);
+            assertSame(persisted, result);
         }
 
         @Test
-        void shouldDetectUsernameExistingInTraineeRepository() {
+        void checksUsernameUniquenessAgainstAllUsers() {
             // Arrange
-            when(traineeMapper.toTrainee(createDto))
-                    .thenReturn(trainee);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINEE_ID);
-
-            when(passwordGenerator.generate())
-                    .thenReturn(PASSWORD);
-
-            when(traineeRepository.existsByUserName(USERNAME))
-                    .thenReturn(true);
-
-            when(usernameGenerator.generate(
-                    anyString(),
-                    anyString(),
-                    ArgumentMatchers.any()
-            )).thenAnswer(invocation -> {
-                Predicate<String> predicate =
-                        invocation.getArgument(2);
-
-                assertTrue(predicate.test(USERNAME));
-
-                return USERNAME + "1";
-            });
-
-            when(traineeRepository.save(any(Trainee.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
+            stubCredentialGeneration();
+            stubMapper();
+            stubSaveEchoesArgument();
+            when(userRepository.existsByUsername(USERNAME)).thenReturn(true);
 
             // Act
-            Trainee result = traineeService.createTrainee(createDto);
+            service.createTrainee(createDto);
 
             // Assert
-            assertEquals(USERNAME + "1", result.getUserName());
-
-            verify(traineeRepository).existsByUserName(USERNAME);
-
-            verify(trainerRepository, never())
-                    .existsByUserName(USERNAME);
+            verify(usernameGenerator).generate(eq("James"), eq("Bond"), existsPredicateCaptor.capture());
+            assertTrue(existsPredicateCaptor.getValue().test(USERNAME));
+            verify(userRepository).existsByUsername(USERNAME);
         }
 
         @Test
-        void shouldDetectUsernameExistingInTrainerRepository() {
+        void rejectsNullDtoBeforeAnyWork() {
             // Arrange
-            when(traineeMapper.toTrainee(createDto))
-                    .thenReturn(trainee);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINEE_ID);
-
-            when(passwordGenerator.generate())
-                    .thenReturn(PASSWORD);
-
-            when(trainerRepository.existsByUserName(USERNAME))
-                    .thenReturn(true);
-
-            when(usernameGenerator.generate(
-                    anyString(),
-                    anyString(),
-                    ArgumentMatchers.any()
-            )).thenAnswer(invocation -> {
-                Predicate<String> predicate =
-                        invocation.getArgument(2);
-
-                assertTrue(predicate.test(USERNAME));
-
-                return USERNAME + "1";
-            });
-
-            when(traineeRepository.save(any(Trainee.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
+            doThrow(new IllegalArgumentException("CreateTraineeDto must not be null"))
+                    .when(traineeValidator).validateCreate(null);
 
             // Act
-            Trainee result = traineeService.createTrainee(createDto);
+            Executable act = () -> service.createTrainee(null);
 
             // Assert
-            assertEquals(USERNAME + "1", result.getUserName());
-
-            verify(traineeRepository).existsByUserName(USERNAME);
-            verify(trainerRepository).existsByUserName(USERNAME);
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(traineeRepository, traineeMapper, passwordGenerator,
+                    usernameGenerator, passwordEncoder);
         }
 
         @Test
-        void shouldSaveGeneratedCredentialsAndActiveStatus() {
+        void rejectsInvalidDtoWithoutSaving() {
             // Arrange
-            Trainee newTrainee = new Trainee();
-
-            newTrainee.setFirstName("Andrii");
-            newTrainee.setLastName("Kosteniuk");
-
-            when(traineeMapper.toTrainee(createDto))
-                    .thenReturn(newTrainee);
-
-            when(idGenerator.generate())
-                    .thenReturn(TRAINEE_ID);
-
-            when(passwordGenerator.generate())
-                    .thenReturn(PASSWORD);
-
-            when(usernameGenerator.generate(
-                    anyString(),
-                    anyString(),
-                    ArgumentMatchers.any()
-            )).thenReturn(USERNAME);
-
-            when(traineeRepository.save(any(Trainee.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
+            doThrow(new IllegalArgumentException("First name must not be blank"))
+                    .when(traineeValidator).validateCreate(createDto);
 
             // Act
-            traineeService.createTrainee(createDto);
+            Executable act = () -> service.createTrainee(createDto);
 
             // Assert
-            ArgumentCaptor<Trainee> captor =
-                    ArgumentCaptor.forClass(Trainee.class);
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(traineeRepository, traineeMapper, passwordGenerator,
+                    usernameGenerator, passwordEncoder);
+        }
 
-            verify(traineeRepository).save(captor.capture());
+        @Test
+        void propagatesPersistenceFailure() {
+            // Arrange
+            stubCredentialGeneration();
+            stubMapper();
+            when(traineeRepository.save(any(Trainee.class)))
+                    .thenThrow(new IllegalStateException("database failure"));
 
-            Trainee saved = captor.getValue();
+            // Act
+            Executable act = () -> service.createTrainee(createDto);
 
-            assertAll(
-                    () -> assertEquals(TRAINEE_ID, saved.getId()),
-                    () -> assertEquals(USERNAME, saved.getUserName()),
-                    () -> assertEquals(PASSWORD, saved.getPassword()),
-                    () -> assertTrue(saved.isActive())
-            );
+            // Assert
+            IllegalStateException ex = assertThrows(IllegalStateException.class, act);
+            assertEquals("database failure", ex.getMessage());
         }
     }
 
     @Nested
-    class UpdateTraineeTests {
+    class Updates {
 
-        @Test
-        void shouldUpdateExistingTraineeSuccessfully() {
-            // Arrange
-            UpdateTraineeDto dto = new UpdateTraineeDto(
-                    "Andrew",
-                    "Kosteniuk",
-                    USERNAME,
-                    LocalDate.of(2000, 10, 19),
-                    address
-            );
-
-            when(traineeRepository.findByUserName(USERNAME))
-                    .thenReturn(Optional.of(trainee));
-
-            doAnswer(invocation -> {
-                UpdateTraineeDto source = invocation.getArgument(0);
-                Trainee target = invocation.getArgument(1);
-
-                target.setFirstName(source.firstName());
-                target.setLastName(source.lastName());
-                target.setDateOfBirth(source.dateOfBirth());
-                target.setAddress(source.address());
-
-                return null;
-            }).when(traineeMapper).updateTrainee(dto, trainee);
-
-            when(traineeRepository.save(trainee))
-                    .thenReturn(trainee);
-
-            // Act
-            Trainee result = traineeService.updateTrainee(dto);
-
-            // Assert
-            assertNotNull(result);
-
-            assertAll(
-                    () -> assertEquals("Andrew", result.getFirstName()),
-                    () -> assertEquals("Kosteniuk", result.getLastName()),
-                    () -> assertEquals(USERNAME, result.getUserName()),
-                    () -> assertEquals(TRAINEE_ID, result.getId())
-            );
-
-            verify(traineeMapper).updateTrainee(dto, trainee);
-            verify(traineeRepository).save(trainee);
+        private UpdateTraineeDto updateDto() {
+            return new UpdateTraineeDto("Andrew", "Updated", USERNAME,
+                    LocalDate.of(1999, 1, 1), address);
         }
 
         @Test
-        void shouldThrowExceptionWhenUpdateDtoIsNull() {
-            doThrow(new IllegalArgumentException("UpdateTrainerDto must not be null"))
-                    .when(dtoValidator)
-                    .validateUpdate(isNull());
-
-            // Act
-            IllegalArgumentException exception = assertThrows(
-                    IllegalArgumentException.class,
-                    () -> traineeService.updateTrainee(null)
-            );
-
-            // Assert
-            assertEquals(
-                    "UpdateTrainerDto must not be null",
-                    exception.getMessage()
-            );
-
-            verify(dtoValidator).validateUpdate(isNull());
-            verifyNoInteractions(trainerRepository, traineeMapper);
-        }
-
-        @Test
-        void shouldThrowExceptionWhenUpdatingNonexistentTrainee() {
+        void modifiesManagedEntityInPlace() {
             // Arrange
-            UpdateTraineeDto dto = new UpdateTraineeDto(
-                    "Andrew",
-                    "Kosteniuk",
-                    "unknown.user",
-                    LocalDate.of(2000, 10, 19),
-                    address
-            );
-
-            when(traineeRepository.findByUserName("unknown.user"))
-                    .thenReturn(Optional.empty());
+            UpdateTraineeDto dto = updateDto();
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
 
             // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> traineeService.updateTrainee(dto)
-            );
+            Trainee result = service.updateTrainee(credentials, dto);
 
             // Assert
-            assertEquals(
-                    "Trainee with username unknown.user not found",
-                    exception.getMessage()
-            );
-
-            verify(traineeRepository, never())
-                    .save(any(Trainee.class));
-
-            verifyNoInteractions(traineeMapper);
-        }
-
-        @Test
-        void shouldPreserveUsernameAndCredentialsDuringUpdate() {
-            // Arrange
-            UpdateTraineeDto dto = new UpdateTraineeDto(
-                    "Andrew",
-                    "Updated",
-                    USERNAME,
-                    LocalDate.of(2000, 10, 19),
-                    address
-            );
-
-            when(traineeRepository.findByUserName(USERNAME))
-                    .thenReturn(Optional.of(trainee));
-
-            when(traineeRepository.save(trainee))
-                    .thenReturn(trainee);
-
-            // Act
-            traineeService.updateTrainee(dto);
-
-            // Assert
-            assertAll(
-                    () -> assertEquals(TRAINEE_ID, trainee.getId()),
-                    () -> assertEquals(USERNAME, trainee.getUserName()),
-                    () -> assertEquals(PASSWORD, trainee.getPassword()),
-                    () -> assertTrue(trainee.isActive())
-            );
-
-            verify(traineeMapper).updateTrainee(dto, trainee);
-        }
-    }
-
-    @Nested
-    class GetTraineeTests {
-
-        @Test
-        void shouldReturnTraineeWhenIdExists() {
-            // Arrange
-            when(traineeRepository.findById(TRAINEE_ID))
-                    .thenReturn(Optional.of(trainee));
-
-            // Act
-            Trainee result = traineeService.getTraineeById(TRAINEE_ID);
-
-            // Assert
-            assertNotNull(result);
             assertSame(trainee, result);
-
-            verify(traineeRepository).findById(TRAINEE_ID);
+            assertEquals("Andrew", result.getUser().getFirstName());
+            assertEquals("Updated", result.getUser().getLastName());
+            assertEquals(LocalDate.of(1999, 1, 1), result.getDateOfBirth());
+            verify(traineeValidator).validateUpdate(dto);
+            verifyNoInteractions(traineeMapper, traineeRepository);
         }
 
         @Test
-        void shouldThrowExceptionWhenTraineeIdDoesNotExist() {
+        void keepsIdentityAndCredentialsUntouched() {
             // Arrange
-            when(traineeRepository.findById(999L))
-                    .thenReturn(Optional.empty());
+            UpdateTraineeDto dto = updateDto();
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
 
             // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> traineeService.getTraineeById(999L)
-            );
+            Trainee result = service.updateTrainee(credentials, dto);
 
             // Assert
-            assertEquals(
-                    "Trainee with id 999 not found",
-                    exception.getMessage()
-            );
+            assertEquals(ID, result.getId());
+            assertEquals(USERNAME, result.getUser().getUserName());
+            assertEquals(HASH, result.getUser().getPassword());
+            assertTrue(result.getUser().getActive());
+        }
 
-            verify(traineeRepository).findById(999L);
+        @Test
+        void rejectsNullDtoBeforeAuthorization() {
+            // Arrange
+            doThrow(new IllegalArgumentException("UpdateTraineeDto must not be null"))
+                    .when(traineeValidator).validateUpdate(null);
+
+            // Act
+            Executable act = () -> service.updateTrainee(credentials, null);
+
+            // Assert
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(authorizationService, traineeRepository);
+        }
+
+        @Test
+        void doesNotModifyProfileWhenNotOwner() {
+            // Arrange
+            UpdateTraineeDto dto = updateDto();
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME))
+                    .thenThrow(new AccessDeniedException("Not authorized to modify this trainee"));
+
+            // Act
+            Executable act = () -> service.updateTrainee(credentials, dto);
+
+            // Assert
+            assertThrows(AccessDeniedException.class, act);
+            assertEquals("James", trainee.getUser().getFirstName());
+            verifyNoInteractions(traineeMapper, traineeRepository);
         }
     }
 
-
     @Nested
-    class DeleteTraineeTests {
+    class Lookups {
 
         @Test
-        void shouldRemoveTraineeWhenNoRelatedTrainingsExist() {
-
+        void returnsTraineeById() {
             // Arrange
-            when(traineeRepository.existsById(TRAINING_ID)).thenReturn(true);
-
-            when(trainingRepository.existsByTraineeId(TRAINING_ID)).thenReturn(false);
+            when(traineeRepository.findById(ID)).thenReturn(Optional.of(trainee));
 
             // Act
-            traineeService.removeTrainee(TRAINING_ID);
+            Trainee result = service.getTraineeById(credentials, ID);
 
             // Assert
-            verify(traineeRepository).existsById(TRAINING_ID);
-
-            verify(trainingRepository).existsByTraineeId(TRAINING_ID);
-
-            verify(traineeRepository).deleteById(TRAINING_ID);
-        }
-        @Test
-        void shouldThrowExceptionWhenDeletingNonexistentTrainee() {
-            // Arrange
-            when(traineeRepository.existsById(999L))
-                    .thenReturn(false);
-
-            // Act
-            EntityNotFoundException exception = assertThrows(
-                    EntityNotFoundException.class,
-                    () -> traineeService.removeTrainee(999L)
-            );
-
-            // Assert
-            assertEquals(
-                    "Trainee with id 999 not found",
-                    exception.getMessage()
-            );
-
-            verify(traineeRepository, never())
-                    .deleteById(anyLong());
+            assertSame(trainee, result);
+            verify(authorizationService).requireTrainee(credentials);
         }
 
         @Test
-        void shouldRejectNullIdWhenDeletingTrainee() {
+        void throwsWhenIdUnknown() {
+            // Arrange
+            when(traineeRepository.findById(999L)).thenReturn(Optional.empty());
+
             // Act
-            NullPointerException exception = assertThrows(
-                    NullPointerException.class,
-                    () -> traineeService.removeTrainee(null)
-            );
+            Executable act = () -> service.getTraineeById(credentials, 999L);
 
             // Assert
-            assertEquals(
-                    "Trainee ID must not be null",
-                    exception.getMessage()
-            );
+            assertThrows(EntityNotFoundException.class, act);
+        }
 
+        @Test
+        void authenticatesBeforeUsernameLookup() {
+            // Arrange
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.of(trainee));
+
+            // Act
+            Trainee result = service.findByUserName(credentials, USERNAME);
+
+            // Assert
+            assertSame(trainee, result);
+            InOrder order = inOrder(authorizationService, traineeRepository);
+            order.verify(authorizationService).requireTrainee(credentials);
+            order.verify(traineeRepository).findByUserName(USERNAME);
+        }
+
+        @Test
+        void blocksUsernameLookupWhenAuthenticationFails() {
+            // Arrange
+            when(authorizationService.requireTrainee(credentials))
+                    .thenThrow(new AuthenticationFailedException());
+
+            // Act
+            Executable act = () -> service.findByUserName(credentials, USERNAME);
+
+            // Assert
+            assertThrows(AuthenticationFailedException.class, act);
             verifyNoInteractions(traineeRepository);
         }
 
         @Test
-        void shouldThrowConflictExceptionWhenTraineeHasRelatedTrainings() {
+        void throwsWhenUsernameUnknown() {
             // Arrange
-            Long traineeId = 1L;
-
-            when(traineeRepository.existsById(traineeId)).thenReturn(true);
-
-            when(trainingRepository.existsByTraineeId(traineeId)).thenReturn(true);
+            when(traineeRepository.findByUserName(USERNAME)).thenReturn(Optional.empty());
 
             // Act
-            ResourceConflictException exception = assertThrows(
-                    ResourceConflictException.class,
-                    () -> traineeService.removeTrainee(traineeId)
-            );
+            Executable act = () -> service.findByUserName(credentials, USERNAME);
 
             // Assert
-            assertEquals(
-                    "Cannot delete trainee with id 1 because related trainings exist",
-                    exception.getMessage()
-            );
+            assertThrows(EntityNotFoundException.class, act);
+        }
+    }
 
-            verify(traineeRepository).existsById(traineeId);
+    @Nested
+    class Deletion {
 
-            verify(traineeRepository, never())
-                    .deleteById(anyLong());
+        @Test
+        void deletesAuthorizedTrainee() {
+            // Arrange
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+
+            // Act
+            service.removeTraineeByUsername(credentials, USERNAME);
+
+            // Assert
+            verify(traineeRepository).delete(trainee);
+        }
+
+        @Test
+        void rejectsUnauthorizedDeletion() {
+            // Arrange
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME))
+                    .thenThrow(new AccessDeniedException("Not authorized to modify this trainee"));
+
+            // Act
+            Executable act = () -> service.removeTraineeByUsername(credentials, USERNAME);
+
+            // Assert
+            assertThrows(AccessDeniedException.class, act);
+            verifyNoInteractions(traineeRepository);
+        }
+
+        @Test
+        void detachesTrainersOnBothSidesBeforeDeleting() {
+            // Arrange
+            Trainer trainer = trainerWithId(2L);
+            trainee.assignTrainer(trainer);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+
+            // Act
+            service.removeTraineeByUsername(credentials, USERNAME);
+
+            // Assert
+            assertTrue(trainee.getTrainers().isEmpty());
+            assertTrue(trainer.getTrainees().isEmpty());
+            verify(traineeRepository).delete(trainee);
+        }
+    }
+
+    @Nested
+    class StateChanges {
+
+        private Trainee detachedReference() {
+            return Trainee.builder().id(ID).build();
+        }
+
+        @Test
+        void activatesInactiveTrainee() {
+            // Arrange
+            trainee.getUser().setActive(false);
+            when(traineeRepository.findById(ID)).thenReturn(Optional.of(trainee));
+
+            // Act
+            service.activateTrainee(credentials, detachedReference());
+
+            // Assert
+
+            InOrder order = inOrder(authorizationService, traineeRepository);
+            order.verify(authorizationService).requireTrainee(credentials);
+            order.verify(traineeRepository).findById(ID);
+            order.verify(traineeRepository).activateTrainee(trainee);
+        }
+
+        @Test
+        void rejectsActivationWhenAlreadyActive() {
+            // Arrange
+            when(traineeRepository.findById(ID)).thenReturn(Optional.of(trainee));
+
+            // Act
+            Executable act = () -> service.activateTrainee(credentials, detachedReference());
+
+            // Assert
+            assertThrows(IllegalStateException.class, act);
+        }
+
+        @Test
+        void deactivatesActiveTrainee() {
+            // Arrange
+            when(traineeRepository.findById(ID)).thenReturn(Optional.of(trainee));
+
+            // Act
+            service.deactivateTrainee(credentials, detachedReference());
+
+            // Assert
+            InOrder order = inOrder(authorizationService, traineeRepository);
+            order.verify(authorizationService).requireTrainee(credentials);
+            order.verify(traineeRepository).findById(ID);
+            order.verify(traineeRepository).deactivateTrainee(trainee);
+        }
+
+        @Test
+        void rejectsDeactivationWhenAlreadyInactive() {
+            // Arrange
+            trainee.getUser().setActive(false);
+            when(traineeRepository.findById(ID)).thenReturn(Optional.of(trainee));
+
+            // Act
+            Executable act = () -> service.deactivateTrainee(credentials, detachedReference());
+
+            // Assert
+            assertThrows(IllegalStateException.class, act);
+        }
+
+        @Test
+        void rejectsNullTraineeOnActivation() {
+            // Arrange
+
+            // Act
+            Executable act = () -> service.activateTrainee(credentials, null);
+
+            // Assert
+            assertThrows(NullPointerException.class, act);
+            verifyNoInteractions(authorizationService, traineeRepository);
+        }
+
+        @Test
+        void rejectsNullTraineeOnDeactivation() {
+            // Arrange
+
+            // Act
+            Executable act = () -> service.deactivateTrainee(credentials, null);
+
+            // Assert
+            assertThrows(NullPointerException.class, act);
+            verifyNoInteractions(authorizationService, traineeRepository);
+        }
+
+        @Test
+        void rejectsUnknownTrainee() {
+            // Arrange
+            when(traineeRepository.findById(ID)).thenReturn(Optional.empty());
+
+            // Act
+            Executable act = () -> service.activateTrainee(credentials, detachedReference());
+
+            // Assert
+            assertThrows(EntityNotFoundException.class, act);
+        }
+
+        @Test
+        void doesNotTouchRepositoryWhenAuthenticationFails() {
+            // Arrange
+            when(authorizationService.requireTrainee(credentials))
+                    .thenThrow(new AuthenticationFailedException());
+
+            // Act
+            Executable act = () -> service.deactivateTrainee(credentials, detachedReference());
+
+            // Assert
+            assertThrows(AuthenticationFailedException.class, act);
+            verifyNoInteractions(traineeRepository);
+        }
+    }
+
+    @Nested
+    class PasswordChanges {
+
+        @Test
+        void delegatesToCredentialServiceAfterAuthorization() {
+            // Arrange
+            ChangePasswordDto dto = new ChangePasswordDto(RAW_PASSWORD, NEW_PASSWORD);
+
+            // Act
+            service.changePassword(credentials, dto);
+
+            // Assert
+            InOrder order = inOrder(authorizationService, credentialService);
+            order.verify(authorizationService).requireTrainee(credentials);
+            order.verify(credentialService).changePassword(credentials, dto);
+        }
+
+        @Test
+        void doesNotChangePasswordIfAuthorizationFails() {
+            // Arrange
+            ChangePasswordDto dto = new ChangePasswordDto(RAW_PASSWORD, NEW_PASSWORD);
+            when(authorizationService.requireTrainee(credentials))
+                    .thenThrow(new AuthenticationFailedException());
+
+            // Act
+            Executable act = () -> service.changePassword(credentials, dto);
+
+            // Assert
+            assertThrows(AuthenticationFailedException.class, act);
+            verifyNoInteractions(credentialService);
+        }
+    }
+
+    @Nested
+    class TrainerAssignments {
+
+        @Test
+        void addsRequestedTrainer() {
+            // Arrange
+            Trainer trainer = trainerWithId(2L);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+            when(trainerRepository.findById(2L)).thenReturn(Optional.of(trainer));
+
+            // Act
+            Set<Trainer> result = service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of(2L)));
+
+            // Assert
+            assertEquals(Set.of(trainer), result);
+            assertTrue(trainer.getTrainees().contains(trainee));
+        }
+
+        @Test
+        void removesExistingTrainerWhenRequestedSetEmpty() {
+            // Arrange
+            Trainer trainer = trainerWithId(2L);
+            trainee.assignTrainer(trainer);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+
+            // Act
+            Set<Trainer> result = service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of()));
+
+            // Assert
+            assertTrue(result.isEmpty());
+            assertFalse(trainer.getTrainees().contains(trainee));
+        }
+
+        @Test
+        void keepsTrainerThatRemainsAssigned() {
+            // Arrange
+            Trainer trainer = trainerWithId(2L);
+            trainee.assignTrainer(trainer);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+            when(trainerRepository.findById(2L)).thenReturn(Optional.of(trainer));
+
+            // Act
+            Set<Trainer> result = service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of(2L)));
+
+            // Assert
+            assertEquals(Set.of(trainer), result);
+            assertTrue(trainer.getTrainees().contains(trainee));
+        }
+
+        @Test
+        void swapsOneTrainerForAnother() {
+            // Arrange
+            Trainer previous = trainerWithId(2L);
+            Trainer replacement = trainerWithId(3L);
+            trainee.assignTrainer(previous);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+            when(trainerRepository.findById(3L)).thenReturn(Optional.of(replacement));
+
+            // Act
+            Set<Trainer> result = service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of(3L)));
+
+            // Assert
+            assertEquals(Set.of(replacement), result);
+            assertFalse(previous.getTrainees().contains(trainee));
+            assertTrue(replacement.getTrainees().contains(trainee));
+        }
+
+        @Test
+        void rejectsNullDto() {
+            // Arrange
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials, null);
+
+            // Assert
+            assertThrows(NullPointerException.class, act);
+            verifyNoInteractions(authorizationService, trainerRepository);
+        }
+
+        @Test
+        void rejectsNullTrainerIds() {
+            // Arrange
+            UpdateTraineeTrainersDto dto = new UpdateTraineeTrainersDto(USERNAME, null);
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials, dto);
+
+            // Assert
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(authorizationService, trainerRepository);
+        }
+
+        @Test
+        void rejectsBlankUsername() {
+            // Arrange
+            UpdateTraineeTrainersDto dto = new UpdateTraineeTrainersDto(" ", Set.of(2L));
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials, dto);
+
+            // Assert
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(authorizationService, trainerRepository);
+        }
+
+        @Test
+        void rejectsNonPositiveTrainerId() {
+            // Arrange
+            UpdateTraineeTrainersDto dto = new UpdateTraineeTrainersDto(USERNAME, Set.of(0L));
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials, dto);
+
+            // Assert
+            assertThrows(IllegalArgumentException.class, act);
+            verifyNoInteractions(authorizationService, trainerRepository);
+        }
+
+        @Test
+        void keepsExistingAssignmentsWhenRequestedTrainerUnknown() {
+            // Arrange
+            Trainer existing = trainerWithId(3L);
+            trainee.assignTrainer(existing);
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME)).thenReturn(trainee);
+            when(trainerRepository.findById(99L)).thenReturn(Optional.empty());
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of(99L)));
+
+            // Assert
+            assertThrows(EntityNotFoundException.class, act);
+            assertEquals(Set.of(existing), trainee.getTrainers());
+        }
+
+        @Test
+        void rejectsUnauthorizedAssignment() {
+            // Arrange
+            when(authorizationService.requireTraineeOwner(credentials, USERNAME))
+                    .thenThrow(new AccessDeniedException("Not authorized to modify this trainee"));
+
+            // Act
+            Executable act = () -> service.replaceTrainers(credentials,
+                    new UpdateTraineeTrainersDto(USERNAME, Set.of(2L)));
+
+            // Assert
+            assertThrows(AccessDeniedException.class, act);
+            verifyNoInteractions(trainerRepository);
         }
     }
 }
